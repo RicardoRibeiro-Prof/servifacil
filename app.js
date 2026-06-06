@@ -76,10 +76,13 @@ async function handleAuthState(userCredential){
   updateSessionUI();
   await refreshAll();
 }
+function canManageProvider(user = currentUser){ return Boolean(user && (isAdmin(user) || user.role === 'prestador' || user.type === 'prestador')); }
+
 function updateSessionUI(){
   const badge=$('userBadge'), logout=$('btnLogout'), mode=$('dataModeBadge');
   const adminButton=$('adminTabButton');
   const heroLogin=$('heroLoginButton');
+  const heroOffer=document.querySelector('[data-go="cadastro"]');
   const adminAccess = isAdmin();
 
   if(currentUser){
@@ -91,6 +94,14 @@ function updateSessionUI(){
     badge.classList.add('hidden');
     logout.classList.add('hidden');
     if(heroLogin) heroLogin.classList.remove('hidden');
+  }
+
+  const accountTab=$('accountTabButton');
+  if(accountTab) accountTab.textContent = adminAccess ? 'Dashboard' : 'Minha conta';
+
+  if(heroOffer){
+    heroOffer.classList.toggle('hidden', adminAccess);
+    heroOffer.textContent = canManageProvider() && !adminAccess ? 'Meus serviços' : 'Oferecer meus serviços';
   }
 
   if(adminButton) adminButton.classList.toggle('hidden', !adminAccess);
@@ -145,6 +156,8 @@ function renderCategories(){
   $('requestCategory').innerHTML = '<option value="">Selecione uma categoria</option>'+opts;
 }
 function showScreen(id){
+  if(id==='admin' && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
+  if(id==='cadastro' && !currentUser){ showToast('Entre ou crie uma conta para oferecer seus serviços.'); id = 'login'; }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active-screen'));
   $(id).classList.add('active-screen');
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
@@ -227,7 +240,7 @@ async function logout(){ if(authOnline) await auth.signOut(); currentUser=null; 
 async function saveProvider(event){
   event.preventDefault();
   if(!currentUser){ showToast('Entre na sua conta para cadastrar um serviço.'); showScreen('login'); return; }
-  if(!(currentUser.role==='prestador'||currentUser.type==='prestador'||isAdmin())){ showToast('Crie uma conta de prestador para oferecer serviços.'); return; }
+  await ensureProviderRole();
   const providers=await getProviders(); const editId=$('editingProviderId').value; const old=providers.find(p=>p.id===editId); const id=editId||newId();
   if(old && !isAdmin() && old.userId!==currentUser.id){ showToast('Você não tem permissão para editar este perfil.'); return; }
   showToast('Salvando perfil e fotos...');
@@ -254,9 +267,9 @@ async function renderDashboard(){
   if(!currentUser){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Entre ou crie uma conta para acessar seu painel.</p><button data-go="login">Entrar agora</button></div>'; return; }
   if(isAdmin()){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Você está como administrador.</p><button data-go="admin">Abrir painel administrativo</button></div>'; return; }
   const requests=await getRequests(), providers=await getProviders();
-  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}<button data-go="solicitacoes">Nova solicitação</button></div>`; return; }
+  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe suas solicitações e, se desejar, cadastre-se também como prestador.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
   const myProviders=providers.filter(p=>p.userId===currentUser.id); const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category); const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
-  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Cadastrar serviço</button></div>';
+  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
 }
 async function renderAdmin(){ const providers=await getProviders(), requests=await getRequests(); $('totalProviders').textContent=providers.length; $('pendingProviders').textContent=providers.filter(p=>p.status==='pendente').length; $('totalRequests').textContent=requests.length; $('totalFeatured').textContent=providers.filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').length; if(!isAdmin()){ $('adminList').innerHTML='<p class="empty-card muted">Acesse com a conta admin para gerenciar o app.</p>'; return; } $('adminList').innerHTML=providers.length?providers.sort((a,b)=>(a.status==='pendente'?-1:1)).map(p=>providerCard(p,true)).join(''):'<p class="empty-card muted">Nenhum prestador cadastrado.</p>'; }
 

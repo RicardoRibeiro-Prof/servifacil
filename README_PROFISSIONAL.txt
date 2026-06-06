@@ -1,3 +1,5 @@
+SERVIFÁCIL V8 - MENU PROFISSIONAL E FLUXO POR TIPO DE USUÁRIO
+
 ServiFácil V7.1 Profissional
 Correção: selo de plano/destaque não aparece duplicado nos cards.
 
@@ -114,3 +116,11 @@ V7.2 - Limpeza visual
 - Oculta planos no card público do profissional.
 - Exibe visualizações apenas em áreas de gestão.
 - Atualiza o cache do PWA para forçar renovação.
+
+
+V8:
+- Aba Cadastrar removida do menu principal.
+- Cliente usa o botão Oferecer meus serviços para virar prestador.
+- Menu mostra Admin apenas para administradores.
+- Menu Minha conta/Dashboard ajustado por perfil.
+- Textos do fluxo de cadastro profissionalizados.

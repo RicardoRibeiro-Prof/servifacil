@@ -44,14 +44,13 @@
     <nav class="tabs">
       <button class="active" data-screen="inicio">Início</button>
       <button data-screen="buscar">Buscar</button>
-      <button data-screen="cadastro">Cadastrar</button>
       <button data-screen="solicitacoes">Pedidos</button>
-      <button data-screen="painel">Meu painel</button>
+      <button id="accountTabButton" data-screen="painel">Minha conta</button>
       <button id="adminTabButton" class="hidden" data-screen="admin">Admin</button>
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <div class="notice"><strong>ServiFácil:</strong> encontre profissionais locais, veja perfis e solicite orçamento de forma simples.</div>
+      <div class="notice"><strong>ServiFácil:</strong> busque profissionais, solicite orçamento e acompanhe seus pedidos em um só lugar.</div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
       <h3>Profissionais em destaque</h3>
@@ -119,8 +118,8 @@
     </section>
 
     <section id="cadastro" class="screen">
-      <h3>Cadastrar ou editar prestador</h3>
-      <div class="notice">Cadastros novos ficam como <strong>pendentes</strong>. O administrador aprova no painel Admin.</div>
+      <h3>Oferecer meus serviços</h3>
+      <div class="notice">Preencha seu perfil profissional. Após o envio, seu cadastro ficará pendente até a aprovação.</div>
       <form id="providerForm" class="form-card">
         <input type="hidden" id="editingProviderId" />
         <label>Nome do profissional ou empresa
