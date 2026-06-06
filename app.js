@@ -199,11 +199,15 @@ function providerMetaLine(p, admin=false, owner=false){
 function providerCard(p, admin=false, owner=false){
   const thumb=firstImage(p);
   return `<article class="pro-card ${p.active===false?'is-paused':''}">
-    ${thumb?`<div class="card-thumb">${imageTag(thumb,p.name)}</div>`:''}
-    <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
-    <p>${safeText(p.description)}</p>
-    <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
-    <div class="profile-actions"><button data-profile="${p.id}">Ver perfil</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
+    <div class="pro-card-main">
+      ${thumb?`<div class="card-thumb">${imageTag(thumb,p.name)}</div>`:''}
+      <div class="pro-card-content">
+        <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
+        <p>${safeText(p.description)}</p>
+        <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
+        <div class="profile-actions"><button data-profile="${p.id}">Ver perfil</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
+      </div>
+    </div>
   </article>`;
 }
 function ownerButtons(p){ return `<button class="secondary" data-edit="${p.id}">Editar perfil</button><button class="outline" data-toggle-active="${p.id}">${p.active===false?'Ativar perfil':'Pausar perfil'}</button>`; }
