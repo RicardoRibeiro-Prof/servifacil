@@ -502,57 +502,32 @@ button, .tabs button, input, select, textarea{
 .plan-card.free-plan .plan-badge{background:#eef2f7; color:#334155;}
 @media(max-width:780px){.plan-grid{display:flex; flex-direction:column; gap:14px}.plan-card{width:100%;}.plan-card-head strong{font-size:1.12rem}.plan-card-head span{font-size:1rem}}
 
-/* Página exclusiva de planos */
-.plans-only-grid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:16px;
-  margin:16px 0 24px;
+/* Correção: planos somente na aba Planos, sempre com 3 opções visíveis */
+.plans-fixed-grid{
+  display:grid !important;
+  grid-template-columns:repeat(3, minmax(0, 1fr)) !important;
+  gap:16px !important;
+  margin:16px 0 18px !important;
+  width:100% !important;
+  max-width:none !important;
 }
-.plans-only-grid .plan-card{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+.plans-fixed-grid .plan-card{
+  display:flex !important;
+  flex-direction:column !important;
+  width:auto !important;
+  min-height:100% !important;
 }
-.plans-only-grid .plan-card button{
-  margin-top:auto;
-  width:100%;
+.plans-fixed-grid .plan-card button{
+  margin-top:auto !important;
+  width:100% !important;
 }
-.payment-box{
-  max-width:680px;
-}
-.payment-card{
-  background:#fff;
-  border:1px solid #dbe7f3;
-  border-radius:22px;
-  padding:18px;
-  box-shadow:0 14px 34px rgba(15,76,129,.10);
-}
-.payment-card h4{
-  margin:10px 0 4px;
-  font-size:1.5rem;
-  color:#0b1b33;
-}
-.payment-price{
-  display:block;
-  font-size:1.25rem;
-  color:#0f4c81;
-  margin-bottom:10px;
-}
-.payment-button{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  margin-top:14px;
-  padding:14px 16px;
-  border-radius:14px;
-  background:#0f4c81;
-  color:#fff;
-  text-decoration:none;
-  font-weight:900;
+.plans-fixed-grid .featured-plan{
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
 }
 @media(max-width:900px){
-  .plans-only-grid{
-    grid-template-columns:1fr;
+  .plans-fixed-grid{
+    grid-template-columns:1fr !important;
   }
 }

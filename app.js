@@ -1,16 +1,6 @@
 const ADMIN_EMAIL = 'admin@servifacil.com';
 const ADMIN_TEST_PASSWORD = '123456';
 
-// Links reais de pagamento dos planos.
-// Cole aqui links de checkout do Mercado Pago, Asaas, PagSeguro, Pix etc.
-// Enquanto estiver vazio, o app mostra solicitação por WhatsApp.
-const PAYMENT_LINKS = {
-  gratis: '',
-  destaque: '',
-  premium: ''
-};
-const PAYMENT_WHATSAPP = '5589999999999';
-
 const categories = [
   { id: 'construcao', name: 'Casa e construção', icon: '🏠' },
   { id: 'beleza', name: 'Beleza e estética', icon: '💇' },
@@ -577,7 +567,7 @@ async function requestProviderPlan(plan){
 }
 
 async function renderPlansPage(){
-  // A página de planos é estática no HTML para garantir que os 3 planos sempre apareçam.
+  // A página de planos é fixa no HTML para garantir que Grátis, Destaque e Premium sempre apareçam.
   return;
 }
 
@@ -605,55 +595,34 @@ async function updateImagePreview(){
 function clearFilters(){ $('searchText').value=''; $('cityFilter').value=''; $('categoryFilter').value=''; $('planFilter').value=''; $('sortFilter').value='featured'; renderProfessionals(); }
 
 
-function openPaymentPlan(plan){
+async function choosePlanFromStaticPage(plan){
   if(plan === 'gratis'){
-    showScreen('cadastro');
     const sel = $('providerPlan');
-    if(sel){ sel.value = 'gratis'; updateImagePreview(); }
-    showToast('Preencha seu cadastro para começar no Plano Grátis.');
+    if(sel){ sel.value = 'gratis'; }
+    if(isProviderUser()){
+      await requestProviderPlan('gratis');
+    } else {
+      showScreen('cadastro');
+      showToast('Preencha seu cadastro para começar no Plano Grátis.');
+    }
     return;
   }
 
-  const link = PAYMENT_LINKS[plan];
-  if(link && link.trim()){
-    window.open(link.trim(), '_blank', 'noopener');
+  if(isProviderUser()){
+    await requestProviderPlan(plan);
+    showToast('Solicitação enviada ao administrador.');
     return;
   }
 
-  showPaymentPlan(plan);
-}
-
-function showPaymentPlan(plan){
-  const cfg = planConfig[plan] || planConfig.destaque;
-  const msg = encodeURIComponent(`Olá! Quero assinar o ${cfg.name} do ServiFácil (${cfg.price}).`);
-  const wa = `https://wa.me/${PAYMENT_WHATSAPP}?text=${msg}`;
-
-  const box = $('paymentBox');
-  if(!box) return;
-
-  box.innerHTML = `
-    <article class="payment-card ${planClass(plan)}">
-      <span class="plan-badge">${safeText(cfg.badge || cfg.name)}</span>
-      <h4>${safeText(cfg.name)}</h4>
-      <strong class="payment-price">${safeText(cfg.price)}</strong>
-      <p>${safeText(cfg.short)}</p>
-      <div class="plan-photo-limit">📷 ${safeText(planPhotoText(plan))}</div>
-      <ul>${cfg.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
-      <div class="notice small">
-        O pagamento automático ainda não foi integrado. Use o botão abaixo para solicitar o pagamento ao administrador.
-        Depois da confirmação, o administrador ativa o plano no painel.
-      </div>
-      <a class="payment-button" href="${wa}" target="_blank" rel="noopener">Solicitar pagamento pelo WhatsApp</a>
-    </article>
-  `;
-  showScreen('pagamento');
+  showScreen('login');
+  showToast('Entre ou crie uma conta de prestador para escolher este plano.');
 }
 
 function bindEvents(){
   document.body.addEventListener('click', async e=>{
     const go=e.target.closest('[data-go]')?.dataset.go; if(go){ showScreen(go); return; }
     const screen=e.target.closest('.tabs button')?.dataset.screen; if(screen){ showScreen(screen); return; }
-    const payPlan=e.target.closest('[data-pay-plan]')?.dataset.payPlan; if(payPlan){ openPaymentPlan(payPlan); return; }
+    const chosenPlan=e.target.closest('[data-plan-choice]')?.dataset.planChoice; if(chosenPlan){ await choosePlanFromStaticPage(chosenPlan); return; }
     const cat=e.target.closest('[data-cat]')?.dataset.cat; if(cat){ $('categoryFilter').value=cat; showScreen('buscar'); return; }
     const prof=e.target.closest('[data-profile]')?.dataset.profile; if(prof){ await openProfile(prof); return; }
     const edit=e.target.closest('[data-edit]')?.dataset.edit; if(edit){ await editProvider(edit); return; }

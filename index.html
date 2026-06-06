@@ -30,7 +30,6 @@
         <div class="hero-actions">
           <button data-go="buscar">Buscar serviço</button>
           <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
-          <button class="outline" data-go="planos">Ver planos</button>
           <button id="heroLoginButton" class="outline" data-go="login">Entrar / Criar conta</button>
         </div>
       </div>
@@ -46,7 +45,7 @@
     </nav>
 
     <section id="inicio" class="screen active-screen">
-<h3>Categorias populares</h3>
+      <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
       <h3>Destaques da sua região</h3>
       <div id="featuredList" class="cards"></div>
@@ -224,18 +223,18 @@
 
 
     <section id="planos" class="screen">
-      <button class="back" data-go="inicio">← Voltar</button>
+      <button class="back" data-go="painel">← Voltar</button>
       <h3>Planos para prestadores</h3>
-      <p class="muted">Escolha o plano ideal para divulgar seus serviços no ServiFácil.</p>
+      <p class="muted">Compare os planos e escolha a melhor forma de divulgar seus serviços.</p>
 
-      <div class="plans-only-grid">
+      <div class="plans-fixed-grid">
         <article class="plan-card free-plan">
           <div class="plan-badge">Entrada</div>
           <div class="plan-card-head">
             <strong>Plano Grátis</strong>
             <span>R$ 0,00</span>
           </div>
-          <p>Perfil básico para começar</p>
+          <p>Perfil básico para começar.</p>
           <div class="plan-photo-limit">📷 1 foto principal</div>
           <ul>
             <li>Perfil público aprovado</li>
@@ -243,7 +242,7 @@
             <li>Contato via WhatsApp para clientes cadastrados</li>
             <li>Sem galeria de trabalhos</li>
           </ul>
-          <button class="outline" data-pay-plan="gratis">Começar grátis</button>
+          <button class="outline" data-plan-choice="gratis">Escolher Grátis</button>
         </article>
 
         <article class="plan-card featured-plan">
@@ -252,7 +251,7 @@
             <strong>Plano Destaque</strong>
             <span>R$ 19,90/mês</span>
           </div>
-          <p>Mais visibilidade para receber contatos</p>
+          <p>Mais visibilidade para receber contatos.</p>
           <div class="plan-photo-limit">📷 1 foto principal + até 3 fotos de trabalhos</div>
           <ul>
             <li>Tudo do plano grátis</li>
@@ -260,7 +259,7 @@
             <li>Prioridade acima do plano grátis</li>
             <li>Ideal para quem quer mais visibilidade</li>
           </ul>
-          <button class="secondary" data-pay-plan="destaque">Escolher destaque</button>
+          <button class="secondary" data-plan-choice="destaque">Escolher Destaque</button>
         </article>
 
         <article class="plan-card premium">
@@ -269,7 +268,7 @@
             <strong>Plano Premium</strong>
             <span>R$ 39,90/mês</span>
           </div>
-          <p>Prioridade máxima no app</p>
+          <p>Prioridade máxima no app.</p>
           <div class="plan-photo-limit">📷 1 foto principal + até 10 fotos de trabalhos</div>
           <ul>
             <li>Tudo do plano destaque</li>
@@ -277,15 +276,13 @@
             <li>Mais força nas buscas</li>
             <li>Galeria completa para mostrar portfólio</li>
           </ul>
-          <button class="success" data-pay-plan="premium">Escolher premium</button>
+          <button class="success" data-plan-choice="premium">Escolher Premium</button>
         </article>
       </div>
-    </section>
 
-    <section id="pagamento" class="screen">
-      <button class="back" data-go="planos">← Voltar aos planos</button>
-      <h3>Pagamento do plano</h3>
-      <div id="paymentBox" class="payment-box"></div>
+      <div class="notice small">
+        Ao escolher um plano, a solicitação fica registrada para o administrador confirmar o pagamento e ativar o plano.
+      </div>
     </section>
 
     <section id="admin" class="screen">
