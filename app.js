@@ -259,6 +259,11 @@ async function saveProvider(event){
   event.preventDefault();
   if(!currentUser){ showToast('Entre na sua conta para cadastrar um serviço.'); showScreen('login'); return; }
 
+  const firebaseUid = (authOnline && auth && auth.currentUser) ? auth.currentUser.uid : null;
+  const userId = firebaseUid || currentUser.id;
+  if(!userId){ showToast('Erro: usuário sem identificação. Saia e entre novamente.'); return; }
+  currentUser = { ...currentUser, id:userId };
+
   const name = $('name').value.trim();
   const category = $('category').value;
   const city = $('city').value.trim();
@@ -270,34 +275,86 @@ async function saveProvider(event){
     return;
   }
 
-  try{
-    await ensureProviderRole();
-    const providers=await getProviders();
-    const editId=$('editingProviderId').value;
-    const old=providers.find(p=>p.id===editId);
-    const id=editId||newId();
-    if(old && !isAdmin() && old.userId!==currentUser.id){ showToast('Você não tem permissão para editar este perfil.'); return; }
+  const editId=$('editingProviderId').value;
+  const id=editId || `provider-${userId}`;
 
-    showToast('Salvando perfil...');
+  try{
+    showToast('Salvando perfil profissional...');
+
+    // Atualiza o usuário para prestador, mas não deixa isso travar o cadastro.
+    if(!isAdmin()){
+      const updatedUser = { ...currentUser, role:'prestador', type:'prestador', updatedAt:now() };
+      try{
+        if(firebaseOnline && db){ await db.collection('users').doc(userId).set(updatedUser, { merge:true }); }
+        else {
+          const users = localGet('users', []);
+          const idx = users.findIndex(u => u.id === userId || String(u.email).toLowerCase() === String(currentUser.email).toLowerCase());
+          if(idx >= 0) users[idx] = { ...users[idx], ...updatedUser };
+          else users.push(updatedUser);
+          localSet('users', users);
+        }
+        currentUser = updatedUser;
+        updateSessionUI();
+      }catch(userErr){
+        console.warn('Não consegui atualizar o tipo do usuário, mas vou tentar salvar o prestador.', userErr);
+      }
+    }
+
+    const providers = await getProviders();
+    const old = providers.find(p=>p.id===editId || p.id===id || p.userId===userId);
+    if(old && editId && !isAdmin() && old.userId!==userId){ showToast('Você não tem permissão para editar este perfil.'); return; }
+
     let imgs={ profileImage: old?.profileImage || '', workImages: Array.isArray(old?.workImages) ? old.workImages : [] };
     try{
       imgs = await processProviderImages(id, old||{});
     }catch(imgErr){
       console.warn('Falha nas imagens. Salvando perfil sem novas fotos.', imgErr);
-      showToast('Não consegui salvar as fotos, mas vou salvar o perfil.');
+      showToast('Fotos ignoradas. Salvando os dados do perfil...');
     }
 
-    const item={ id, userId:old?.userId||currentUser.id, name, category, city, neighborhood:$('neighborhood').value.trim(), whatsapp, price:$('price').value.trim(), description, photo:$('photo').value.trim(), ...imgs, status:old?.status || (isAdmin()?'aprovado':'pendente'), active:old?.active ?? true, plan:old?.plan || 'gratis', featured:old?.featured || false, rating:old?.rating || null, ratingCount:old?.ratingCount || 0, views:old?.views || 0, createdAt:old?.createdAt || now(), updatedAt:now() };
-    await upsertDoc('providers', item);
+    const item={
+      id,
+      userId,
+      name,
+      category,
+      city,
+      neighborhood:$('neighborhood').value.trim(),
+      whatsapp,
+      price:$('price').value.trim(),
+      description,
+      photo:$('photo').value.trim(),
+      ...imgs,
+      status:old?.status || (isAdmin()?'aprovado':'pendente'),
+      active:old?.active ?? true,
+      plan:old?.plan || 'gratis',
+      featured:old?.featured || false,
+      rating:old?.rating || null,
+      ratingCount:old?.ratingCount || 0,
+      views:old?.views || 0,
+      createdAt:old?.createdAt || now(),
+      updatedAt:now()
+    };
+
+    if(firebaseOnline && db){
+      if(authOnline && !auth.currentUser){ throw new Error('Você não está autenticado no Firebase. Saia e entre novamente.'); }
+      await db.collection('providers').doc(id).set(item, { merge:true });
+    } else {
+      const list=localGet('providers',[]);
+      const idx=list.findIndex(x=>x.id===item.id);
+      idx>=0?list[idx]=item:list.unshift(item);
+      localSet('providers',list);
+    }
+
     cancelProviderEdit(false);
     await refreshAll();
-    showToast(editId?'Perfil atualizado.':'Cadastro enviado para aprovação.');
+    showToast(editId?'Perfil atualizado.':'Perfil enviado para aprovação.');
     showScreen('painel');
   }catch(err){
     console.error('Erro ao salvar prestador:', err);
-    let msg = 'Não foi possível salvar o prestador.';
-    if(err?.code === 'permission-denied') msg = 'Firebase bloqueou o cadastro. Confira as regras do Firestore.';
-    else if(err?.message) msg = 'Erro ao salvar: ' + err.message;
+    const msg = err?.code === 'permission-denied'
+      ? 'Firebase bloqueou o cadastro. Confira as regras do Firestore.'
+      : 'Erro ao salvar: ' + (err?.message || err);
+    alert(msg);
     showToast(msg);
   }
 }
