@@ -44,7 +44,7 @@
 
     <section id="inicio" class="screen active-screen">
       <div class="notice">
-        <strong>Versão 3 implementada:</strong> agora o app está pronto para Firebase/Firestore, com modo online quando configurado e fallback local automático.
+        <strong>Versão 4 implementada:</strong> fotos dos serviços, galeria de trabalhos, edição do perfil e ativar/desativar perfil no painel do prestador.
       </div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
@@ -108,6 +108,7 @@
       <h3>Cadastrar prestador de serviço</h3>
       <div class="notice">Cadastros novos ficam como <strong>pendentes</strong>. O administrador pode aprovar no painel Admin.</div>
       <form id="providerForm" class="form-card">
+        <input type="hidden" id="editingProviderId" />
         <label>Nome do profissional ou empresa
           <input required id="name" placeholder="Ex: João Silva" />
         </label>
@@ -136,11 +137,26 @@
           <textarea required id="description" rows="5" placeholder="Explique o que você faz, sua experiência e os tipos de serviço que atende."></textarea>
         </label>
 
-        <label>Link de foto, Instagram ou portfólio
-          <input id="photo" placeholder="Cole uma URL de imagem, Instagram ou portfólio" />
+        <label>Foto principal do perfil
+          <input id="profileImage" type="file" accept="image/*" />
+          <small class="muted">Use uma foto do profissional, logomarca ou imagem do serviço. Se editar e não escolher nova foto, a foto atual será mantida.</small>
         </label>
 
-        <button type="submit">Cadastrar serviço</button>
+        <label>Fotos de trabalhos realizados
+          <input id="workImages" type="file" accept="image/*" multiple />
+          <small class="muted">Você pode selecionar até 3 fotos. Para economizar espaço, as imagens serão reduzidas automaticamente.</small>
+        </label>
+
+        <div id="imagePreview" class="image-preview muted">Nenhuma nova foto selecionada.</div>
+
+        <label>Link externo opcional: Instagram, portfólio ou site
+          <input id="photo" placeholder="Cole uma URL, se tiver" />
+        </label>
+
+        <div class="row-actions">
+          <button id="providerSubmitButton" type="submit">Cadastrar serviço</button>
+          <button id="cancelEditProvider" type="button" class="outline hidden" onclick="cancelProviderEdit()">Cancelar edição</button>
+        </div>
       </form>
     </section>
 

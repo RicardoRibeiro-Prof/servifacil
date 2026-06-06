@@ -120,7 +120,7 @@ async function seedFirebaseIfEmpty() {
 
 async function getUsers() { return getCollection('users', sampleUsers); }
 async function saveUsers(users) { return saveCollection('users', users); }
-async function getProviders() { return (await getCollection('providers', sampleProviders)).map(p => ({ status: 'aprovado', ...p })); }
+async function getProviders() { return (await getCollection('providers', sampleProviders)).map(p => ({ status: 'aprovado', active: true, workImages: [], ...p })); }
 async function saveProviders(providers) { return saveCollection('providers', providers); }
 async function getRequests() { return getCollection('requests', []); }
 async function saveRequests(requests) { return saveCollection('requests', requests); }
@@ -131,7 +131,69 @@ function clearSession() { localStorage.removeItem('session'); updateSessionUI();
 function categoryName(id) { return categories.find(c => c.id === id)?.name || 'Categoria'; }
 function statusLabel(status) { return status === 'aprovado' ? 'Aprovado' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'; }
 function statusClass(status) { return status === 'aprovado' ? 'approved' : status === 'bloqueado' ? 'blocked' : 'pending'; }
-async function approvedProviders() { return (await getProviders()).filter(p => p.status === 'aprovado'); }
+
+function safeText(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+function firstImage(provider) {
+  return provider.profileImage || (Array.isArray(provider.workImages) && provider.workImages[0]) || '';
+}
+
+function imageTag(src, alt = 'Foto do serviço') {
+  if (!src) return '';
+  return `<img src="${src}" alt="${safeText(alt)}" loading="lazy" />`;
+}
+
+function providerGallery(provider) {
+  const images = [];
+  if (provider.profileImage) images.push(provider.profileImage);
+  if (Array.isArray(provider.workImages)) images.push(...provider.workImages.filter(Boolean));
+  return images.length ? `<div class="gallery">${images.slice(0, 4).map((img, index) => imageTag(img, `${provider.name} - foto ${index + 1}`)).join('')}</div>` : '';
+}
+
+function resizeImageToDataUrl(file, maxWidth = 900, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Arquivo de imagem inválido.'));
+      img.onload = () => {
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function readImagesFromInput(inputId, limit = 3) {
+  const input = $(inputId);
+  const files = Array.from(input.files || []).slice(0, limit);
+  const images = [];
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    images.push(await resizeImageToDataUrl(file));
+  }
+  return images;
+}
+
+function updateImagePreview() {
+  const preview = $('imagePreview');
+  if (!preview) return;
+  const profileCount = $('profileImage')?.files?.length || 0;
+  const workCount = $('workImages')?.files?.length || 0;
+  const total = profileCount + workCount;
+  preview.textContent = total ? `${total} nova(s) foto(s) selecionada(s).` : 'Nenhuma nova foto selecionada.';
+}
+async function approvedProviders() { return (await getProviders()).filter(p => p.status === 'aprovado' && p.active !== false); }
 
 function updateSessionUI() {
   const user = getSession();
@@ -182,27 +244,38 @@ function filterByCategory(categoryId) {
   showScreen('buscar');
 }
 
-function providerCard(provider, admin = false) {
+function providerCard(provider, admin = false, owner = false) {
   const status = provider.status || 'aprovado';
+  const thumb = firstImage(provider);
   return `
-    <article class="pro-card">
+    <article class="pro-card ${provider.active === false ? 'is-paused' : ''}">
+      ${thumb ? `<div class="card-thumb">${imageTag(thumb, provider.name)}</div>` : ''}
       <div class="pro-header">
         <div>
-          <strong>${provider.name}</strong>
-          <p class="muted">${categoryName(provider.category)} • ${provider.city}${provider.neighborhood ? ' • ' + provider.neighborhood : ''}</p>
+          <strong>${safeText(provider.name)}</strong>
+          <p class="muted">${categoryName(provider.category)} • ${safeText(provider.city)}${provider.neighborhood ? ' • ' + safeText(provider.neighborhood) : ''}</p>
         </div>
         <div class="badges">
           ${provider.featured ? '<span class="badge">Destaque</span>' : ''}
-          ${admin ? `<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>` : ''}
+          ${provider.active === false ? '<span class="badge pending">Pausado</span>' : ''}
+          ${admin || owner ? `<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>` : ''}
         </div>
       </div>
-      <p>${provider.description}</p>
-      <p><span class="rating">⭐ ${provider.rating || 'Novo'}</span>${provider.price ? ' • ' + provider.price : ''}</p>
+      <p>${safeText(provider.description)}</p>
+      <p><span class="rating">⭐ ${safeText(provider.rating || 'Novo')}</span>${provider.price ? ' • ' + safeText(provider.price) : ''}</p>
       <div class="profile-actions">
         <button onclick="openProfile('${provider.id}')">Ver perfil</button>
+        ${owner ? ownerProviderButtons(provider) : ''}
         ${admin ? adminProviderButtons(provider) : ''}
       </div>
     </article>
+  `;
+}
+
+function ownerProviderButtons(provider) {
+  return `
+    <button class="secondary" onclick="editProvider('${provider.id}')">Editar perfil</button>
+    <button class="outline" onclick="toggleProviderActive('${provider.id}')">${provider.active === false ? 'Ativar perfil' : 'Pausar perfil'}</button>
   `;
 }
 
@@ -247,15 +320,16 @@ async function openProfile(id) {
 
   $('profileBox').innerHTML = `
     <article class="profile-card">
-      <h2>${provider.name}</h2>
+      ${providerGallery(provider)}
+      <h2>${safeText(provider.name)}</h2>
       <p><span class="badge">${categoryName(provider.category)}</span> ${provider.featured ? '<span class="badge">Destaque</span>' : ''}</p>
-      <p class="muted">📍 ${provider.city}${provider.neighborhood ? ' • ' + provider.neighborhood : ''}</p>
-      <p class="rating">⭐ ${provider.rating || 'Profissional novo'}</p>
-      <h4>Descrição</h4><p>${provider.description}</p>
-      ${provider.price ? `<h4>Preço inicial</h4><p>${provider.price}</p>` : ''}
-      ${provider.photo ? `<h4>Portfólio</h4><p><a href="${provider.photo}" target="_blank">Abrir link informado</a></p>` : ''}
+      <p class="muted">📍 ${safeText(provider.city)}${provider.neighborhood ? ' • ' + safeText(provider.neighborhood) : ''}</p>
+      <p class="rating">⭐ ${safeText(provider.rating || 'Profissional novo')}</p>
+      <h4>Descrição</h4><p>${safeText(provider.description)}</p>
+      ${provider.price ? `<h4>Preço inicial</h4><p>${safeText(provider.price)}</p>` : ''}
+      ${provider.photo ? `<h4>Link externo</h4><p><a href="${safeText(provider.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>` : ''}
       <div class="profile-actions">
-        <a href="${whatsappLink}" target="_blank"><button class="whatsapp">Chamar no WhatsApp</button></a>
+        <a href="${whatsappLink}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a>
         <button onclick="startRequestForProvider('${provider.id}')">Solicitar orçamento pelo app</button>
       </div>
     </article>
@@ -340,9 +414,52 @@ async function renderDashboard() {
       <div><strong>${providers.filter(p => p.featured).length}</strong><span>Destaques</span></div>
     </div>
     <h4>Meus perfis</h4>
-    <div class="cards">${providers.map(p => providerCard(p)).join('')}</div>
+    <div class="cards">${providers.map(p => providerCard(p, false, true)).join('')}</div>
     <h4>Pedidos para mim</h4>
     <div class="cards">${myRequests.length ? myRequests.map(r => requestCard(r, true)).join('') : '<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`;
+}
+
+
+async function editProvider(id) {
+  const user = getSession();
+  const provider = (await getProviders()).find(p => p.id === id);
+  if (!provider) return;
+  if (!user || (user.type !== 'admin' && provider.userId !== user.id && provider.name.toLowerCase() !== user.name.toLowerCase())) {
+    showToast('Você não tem permissão para editar este perfil.');
+    return;
+  }
+  $('editingProviderId').value = provider.id;
+  $('name').value = provider.name || '';
+  $('category').value = provider.category || '';
+  $('city').value = provider.city || '';
+  $('neighborhood').value = provider.neighborhood || '';
+  $('whatsapp').value = provider.whatsapp || '';
+  $('price').value = provider.price || '';
+  $('description').value = provider.description || '';
+  $('photo').value = provider.photo || '';
+  $('providerSubmitButton').textContent = 'Salvar alterações';
+  $('cancelEditProvider').classList.remove('hidden');
+  updateImagePreview();
+  showScreen('cadastro');
+  showToast('Editando perfil. Altere os dados e salve.');
+}
+
+function cancelProviderEdit() {
+  $('providerForm').reset();
+  $('editingProviderId').value = '';
+  $('providerSubmitButton').textContent = 'Cadastrar serviço';
+  $('cancelEditProvider').classList.add('hidden');
+  updateImagePreview();
+  showToast('Edição cancelada.');
+}
+
+async function toggleProviderActive(id) {
+  const providers = await getProviders();
+  const provider = providers.find(p => p.id === id);
+  if (!provider) return;
+  await upsertDoc('providers', { ...provider, active: provider.active === false });
+  await refreshAll();
+  showToast(provider.active === false ? 'Perfil ativado.' : 'Perfil pausado.');
 }
 
 async function renderAdmin() {
@@ -441,15 +558,44 @@ async function refreshAll() {
 $('providerForm').addEventListener('submit', async event => {
   event.preventDefault();
   const user = getSession();
+  const editingId = $('editingProviderId').value;
+  const providers = await getProviders();
+  const existing = editingId ? providers.find(p => p.id === editingId) : null;
+
+  const newProfileImages = await readImagesFromInput('profileImage', 1);
+  const newWorkImages = await readImagesFromInput('workImages', 3);
+
   const provider = {
-    id: newId(),
-    userId: user?.id || null,
-    name: $('name').value.trim(), category: $('category').value, city: $('city').value.trim(), neighborhood: $('neighborhood').value.trim(),
-    whatsapp: $('whatsapp').value.trim(), price: $('price').value.trim(), description: $('description').value.trim(), photo: $('photo').value.trim(),
-    rating: 'Novo', featured: false, status: 'pendente', createdAt: new Date().toISOString()
+    ...(existing || {}),
+    id: existing?.id || newId(),
+    userId: existing?.userId || user?.id || null,
+    name: $('name').value.trim(),
+    category: $('category').value,
+    city: $('city').value.trim(),
+    neighborhood: $('neighborhood').value.trim(),
+    whatsapp: $('whatsapp').value.trim(),
+    price: $('price').value.trim(),
+    description: $('description').value.trim(),
+    photo: $('photo').value.trim(),
+    profileImage: newProfileImages[0] || existing?.profileImage || '',
+    workImages: newWorkImages.length ? newWorkImages : (existing?.workImages || []),
+    rating: existing?.rating || 'Novo',
+    featured: existing?.featured || false,
+    active: existing?.active !== false,
+    status: existing?.status || 'pendente',
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
+
   await upsertDoc('providers', provider);
-  event.target.reset(); await refreshAll(); showToast('Cadastro enviado! Aguarde aprovação do administrador.'); showScreen('painel');
+  event.target.reset();
+  $('editingProviderId').value = '';
+  $('providerSubmitButton').textContent = 'Cadastrar serviço';
+  $('cancelEditProvider').classList.add('hidden');
+  updateImagePreview();
+  await refreshAll();
+  showToast(existing ? 'Perfil atualizado com sucesso.' : 'Cadastro enviado! Aguarde aprovação do administrador.');
+  showScreen('painel');
 });
 
 $('accountForm').addEventListener('submit', async event => {
@@ -488,6 +634,8 @@ $('requestForm').addEventListener('submit', async event => {
 });
 
 $('requestCategory').addEventListener('change', renderRequestProviderOptions);
+$('profileImage').addEventListener('change', updateImagePreview);
+$('workImages').addEventListener('change', updateImagePreview);
 
 let deferredPrompt;
 const installButton = $('btnInstall');

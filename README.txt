@@ -1,60 +1,26 @@
-SERVIFÁCIL V3 - FIREBASE / FIRESTORE
+ServiFácil V4 - Marketplace de Serviços Locais
 
-O que mudou nesta versão:
-- O app agora tem uma camada de dados que funciona em dois modos:
-  1) Modo Local: salva no aparelho, usando localStorage.
-  2) Modo Online Firebase: salva no Firestore, compartilhando dados entre celulares/computadores.
-- Se o arquivo firebase-config.js estiver com os dados reais do Firebase, o app entra no modo Online Firebase.
-- Se ainda estiver com os textos de exemplo, o app entra automaticamente no modo Local.
+Novidades da versão 4:
+- Upload de foto principal do prestador.
+- Upload de até 3 fotos de trabalhos realizados.
+- As imagens são reduzidas automaticamente antes de salvar.
+- Galeria de imagens no perfil público.
+- Cartões de profissionais com imagem de destaque.
+- Painel do prestador com botão Editar perfil.
+- Prestador pode pausar/ativar o próprio perfil.
+- Mantém integração Firebase/Firestore já configurada.
+- Continua funcionando em modo local caso o Firebase não esteja disponível.
 
-COMO CONFIGURAR O FIREBASE
-
-1. Acesse o Firebase Console.
-2. Crie um projeto.
-3. Dentro do projeto, crie um app Web.
-4. Copie as configurações do app Web.
-5. Abra o arquivo firebase-config.js.
-6. Substitua os valores:
-   - apiKey
-   - authDomain
-   - projectId
-   - storageBucket
-   - messagingSenderId
-   - appId
-7. No Firebase, ative o Firestore Database.
-8. Publique o projeto em uma hospedagem, por exemplo:
-   - Firebase Hosting
-   - GitHub Pages
-   - Netlify
-   - Vercel
-
-CONTA ADMIN DE TESTE
-
+Conta admin de teste:
 E-mail: admin@servifacil.com
 Senha: 123456
 
-OBSERVAÇÃO IMPORTANTE
+Observação importante:
+Nesta versão, as imagens são salvas como texto Base64 dentro do Firestore. Isso funciona bem para testes e MVP, mas para uso grande/profissional o ideal é implementar Firebase Storage.
 
-Esta versão usa login simples salvo na coleção users do Firestore. Ela é ótima para testar e validar o aplicativo, mas ainda não é o modelo final de segurança para produção.
-
-Para uma versão profissional de verdade, o próximo passo recomendado é implementar:
-- Firebase Authentication
-- Regras de segurança do Firestore
-- Upload de imagens com Firebase Storage
-- Painel admin protegido
-- Recuperação de senha
-
-REGRAS TEMPORÁRIAS DO FIRESTORE PARA TESTE
-
-Use somente durante desenvolvimento:
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
-
-Atenção: essas regras deixam o banco aberto. Não use em produção.
+Como atualizar no GitHub Pages:
+1. Extraia este ZIP.
+2. Suba/substitua todos os arquivos no repositório do GitHub.
+3. Faça commit.
+4. Aguarde o GitHub Pages atualizar.
+5. No celular, feche e abra o app novamente. Se ainda aparecer a versão antiga, limpe o cache ou atualize a página.

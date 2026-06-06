@@ -75,3 +75,14 @@ label { display: grid; gap: 6px; font-weight: bold; color: var(--text); }
 .request-meta span { background: #f1f5f9; border-radius: 999px; padding: 6px 9px; color: var(--muted); font-size: 13px; }
 @media (max-width: 860px) { .tabs { grid-template-columns: repeat(3, 1fr); } .filters, .split-grid { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { main { padding: 12px; } .topbar { align-items: flex-start; flex-direction: column; } .tabs { grid-template-columns: repeat(2, 1fr); } .stats { grid-template-columns: 1fr; } .hero { padding: 20px; } .pro-header { flex-direction: column; } .badges { justify-content: flex-start; } }
+
+
+.card-thumb { width: 100%; height: 170px; border-radius: 14px; overflow: hidden; background: #e2e8f0; margin-bottom: 8px; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.gallery img { width: 100%; height: 180px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border); background: #e2e8f0; }
+.image-preview { border: 1px dashed var(--border); border-radius: 12px; padding: 12px; background: #f8fafc; font-size: 14px; }
+.pro-card.is-paused { opacity: .72; border-style: dashed; }
+.form-card small { font-weight: normal; line-height: 1.35; }
+a button { pointer-events: none; }
+@media (max-width: 520px) { .card-thumb { height: 140px; } .gallery img { height: 150px; } }

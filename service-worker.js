@@ -1,4 +1,4 @@
-const CACHE_NAME = 'servifacil-v3-online-tiny-1';
+const CACHE_NAME = 'servifacil-v4-fotos-edicao-1';
 const FILES_TO_CACHE = [
   './',
   './index.html',
