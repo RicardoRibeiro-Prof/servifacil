@@ -501,3 +501,12 @@ button, .tabs button, input, select, textarea{
 .plan-card.premium .plan-badge{background:#16a34a; color:#fff;}
 .plan-card.free-plan .plan-badge{background:#eef2f7; color:#334155;}
 @media(max-width:780px){.plan-grid{display:flex; flex-direction:column; gap:14px}.plan-card{width:100%;}.plan-card-head strong{font-size:1.12rem}.plan-card-head span{font-size:1rem}}
+
+
+/* V10 - planos visíveis e escolha no cadastro */
+#plansPageCards.plans-page-list{display:flex;flex-direction:column;gap:16px;max-width:760px;}
+#plansPageCards.plans-page-list .plan-card{width:100%;}
+.plan-quick-guide{margin-top:-4px;margin-bottom:4px;}
+@media(max-width:780px){
+  #plansPageCards.plans-page-list{max-width:100%;}
+}

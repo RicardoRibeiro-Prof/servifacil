@@ -399,6 +399,7 @@ async function saveProvider(event){
   const city = $('city').value.trim();
   const whatsapp = $('whatsapp').value.trim();
   const description = $('description').value.trim();
+  const selectedPlan = $('providerPlan')?.value || 'gratis';
 
   if(!name || !category || !city || !whatsapp || !description){
     showToast('Preencha nome, categoria, cidade, WhatsApp e descrição.');
@@ -457,8 +458,8 @@ async function saveProvider(event){
       photoUrl:imgs.profileImage || old?.photoUrl || '',
       status:old?.status || (isAdmin()?'aprovado':'pendente'),
       active:old?.active ?? true,
-      plan:old?.plan || 'gratis',
-      featured:old?.featured || false,
+      plan:selectedPlan || old?.plan || 'gratis',
+      featured:(selectedPlan === 'destaque' || selectedPlan === 'premium'),
       rating:old?.rating || null,
       ratingCount:old?.ratingCount || 0,
       views:old?.views || 0,
@@ -489,7 +490,7 @@ async function saveProvider(event){
     showToast(msg);
   }
 }
-async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id){ showToast('Você não tem permissão para editar este perfil.'); return; } $('editingProviderId').value=p.id; $('name').value=p.name||''; $('category').value=p.category||''; $('city').value=p.city||''; $('neighborhood').value=p.neighborhood||''; $('whatsapp').value=p.whatsapp||''; $('price').value=p.price||''; $('description').value=p.description||''; $('photo').value=p.photo||''; $('providerSubmitButton').textContent='Salvar alterações'; $('cancelEditProvider').classList.remove('hidden'); updateImagePreview(); showScreen('cadastro'); }
+async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id){ showToast('Você não tem permissão para editar este perfil.'); return; } $('editingProviderId').value=p.id; $('name').value=p.name||''; $('category').value=p.category||''; $('city').value=p.city||''; $('neighborhood').value=p.neighborhood||''; $('whatsapp').value=p.whatsapp||''; $('price').value=p.price||''; $('description').value=p.description||''; $('providerPlan').value=p.plan || 'gratis'; $('photo').value=p.photo||''; $('providerSubmitButton').textContent='Salvar alterações'; $('cancelEditProvider').classList.remove('hidden'); updateImagePreview(); showScreen('cadastro'); }
 function cancelProviderEdit(toast=true){ $('providerForm').reset(); $('editingProviderId').value=''; $('providerSubmitButton').textContent='Cadastrar serviço'; $('cancelEditProvider').classList.add('hidden'); updateImagePreview(); if(toast) showToast('Edição cancelada.'); }
 async function toggleProviderActive(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id) return showToast('Sem permissão.'); await upsertDoc('providers',{...p,active:p.active===false}); await refreshAll(); showToast(p.active===false?'Perfil ativado.':'Perfil pausado.'); }
 async function updateProviderStatus(id,status){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,status}); await refreshAll(); showToast(`Prestador ${statusLabel(status).toLowerCase()}.`); }
@@ -569,6 +570,7 @@ async function requestProviderPlan(plan){
 async function renderPlansPage(){
   const el=$('plansPageCards');
   if(!el) return;
+  el.classList.add('plans-page-list');
   const providers = currentUser ? await getProviders() : [];
   const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
   const currentPlan = mine[0]?.plan || 'gratis';
@@ -608,12 +610,12 @@ async function refreshAll(){ await renderCategories(); await renderFeatured(); i
 async function updateImagePreview(){
   const profileTotal = $('profileImage')?.files?.length || 0;
   const workTotal = $('workImages')?.files?.length || 0;
-  let plan = 'gratis';
+  let plan = $('providerPlan')?.value || 'gratis';
   try{
     const editId = $('editingProviderId')?.value || '';
     const providers = currentUser ? await getProviders() : [];
     const p = providers.find(x => x.id === editId || x.userId === currentUser?.id);
-    plan = p?.plan || 'gratis';
+    plan = $('providerPlan')?.value || p?.plan || 'gratis';
   }catch(e){}
   const limit = planPhotoLimit(plan);
   const extra = workTotal && workTotal > limit ? ` Seu plano atual permite ${limit} foto${limit>1?'s':''} de trabalhos; as extras serão ignoradas.` : '';
@@ -647,7 +649,7 @@ function bindEvents(){
   $('cancelEditProvider').addEventListener('click', ()=>cancelProviderEdit());
   $('clearFilters').addEventListener('click', clearFilters);
   ['searchText','cityFilter','categoryFilter','planFilter','sortFilter'].forEach(id=>$(id).addEventListener('input', renderProfessionals));
-  $('profileImage').addEventListener('change', updateImagePreview); $('workImages').addEventListener('change', updateImagePreview);
+  $('profileImage').addEventListener('change', updateImagePreview); $('workImages').addEventListener('change', updateImagePreview); $('providerPlan').addEventListener('change', updateImagePreview);
   $('exportProviders').addEventListener('click', async()=>exportJson('prestadores-servifacil.json', await getProviders()));
   $('exportRequests').addEventListener('click', async()=>exportJson('solicitacoes-servifacil.json', await getRequests()));
   $('exportReviews').addEventListener('click', async()=>exportJson('avaliacoes-servifacil.json', await getReviews()));

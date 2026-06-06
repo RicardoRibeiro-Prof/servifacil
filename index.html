@@ -141,6 +141,20 @@
         <label>Descrição dos serviços
           <textarea required id="description" rows="5" placeholder="Explique o que você faz, sua experiência e os tipos de serviço que atende."></textarea>
         </label>
+        <label>Escolha seu plano
+          <select id="providerPlan">
+            <option value="gratis">Plano Grátis — 1 foto principal</option>
+            <option value="destaque">Plano Destaque — 1 foto principal + até 3 fotos de trabalhos</option>
+            <option value="premium">Plano Premium — 1 foto principal + até 10 fotos de trabalhos</option>
+          </select>
+          <small class="muted">Selecione o plano desejado já no cadastro. O plano define sua visibilidade e o limite de fotos do perfil.</small>
+        </label>
+        <div class="photo-guidelines plan-quick-guide">
+          <strong>Resumo rápido dos planos</strong>
+          <span><strong>Grátis:</strong> aparece na busca e permite 1 foto principal.</span>
+          <span><strong>Destaque:</strong> aparece em destaques da região e libera até 3 fotos de trabalhos.</span>
+          <span><strong>Premium:</strong> prioridade máxima no app e até 10 fotos de trabalhos.</span>
+        </div>
         <label>Foto principal do perfil
           <input id="profileImage" type="file" accept="image/*" />
           <small class="muted">Recomendado: foto quadrada 800 x 800 px, formato JPG ou PNG, com até 1 MB. Use uma foto clara, bem enquadrada e com fundo simples.</small>
