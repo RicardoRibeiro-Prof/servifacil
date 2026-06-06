@@ -17,21 +17,24 @@ const planConfig = {
     price: 'R$ 0,00',
     short: 'Perfil básico para começar',
     adminNote: 'Aparece na busca, sem prioridade nos destaques.',
-    features: ['Perfil público aprovado', 'Contato via WhatsApp para clientes cadastrados', 'Até 1 foto principal']
+    photoLimit: 0,
+    features: ['Perfil público aprovado', 'Contato via WhatsApp para clientes cadastrados', '1 foto principal', 'Sem galeria de trabalhos']
   },
   destaque: {
     name: 'Plano Destaque',
     price: 'R$ 19,90/mês',
     short: 'Mais visibilidade na região',
     adminNote: 'Aparece nos destaques e acima do plano grátis.',
-    features: ['Tudo do plano grátis', 'Aparece em Destaques da sua região', 'Selo de destaque', 'Prioridade na listagem']
+    photoLimit: 3,
+    features: ['Tudo do plano grátis', 'Aparece em Destaques da sua região', 'Prioridade na listagem', '1 foto principal + até 3 fotos de trabalhos']
   },
   premium: {
     name: 'Plano Premium',
     price: 'R$ 39,90/mês',
     short: 'Prioridade máxima no app',
-    adminNote: 'Melhor posição e maior prioridade nas buscas.',
-    features: ['Tudo do plano destaque', 'Prioridade máxima na ordenação', 'Mais força nas buscas', 'Melhor opção para profissionais ativos']
+    adminNote: 'Melhor posição, galeria completa e maior prioridade nas buscas.',
+    photoLimit: 10,
+    features: ['Tudo do plano destaque', 'Prioridade máxima na ordenação', 'Mais força nas buscas', '1 foto principal + até 10 fotos de trabalhos', 'Galeria completa para mostrar portfólio']
   }
 };
 
@@ -59,6 +62,8 @@ function planClass(plan){ return plan === 'premium' ? 'premium' : plan === 'dest
 function planFullName(plan){ return planConfig[plan]?.name || 'Plano Grátis'; }
 function planPrice(plan){ return planConfig[plan]?.price || 'R$ 0,00'; }
 function planSummary(plan){ return planConfig[plan]?.short || 'Perfil básico'; }
+function planPhotoLimit(plan){ return Number(planConfig[plan]?.photoLimit ?? 0); }
+function planPhotoText(plan){ const limit = planPhotoLimit(plan); return limit ? `1 foto principal + até ${limit} foto${limit>1?'s':''} de trabalhos` : '1 foto principal'; }
 function planWeight(p){ const plan = p.plan || (p.featured ? 'destaque':'gratis'); return plan === 'premium' ? 3 : plan === 'destaque' ? 2 : 1; }
 function statusLabel(s){ return s === 'aprovado' ? 'Aprovado' : s === 'bloqueado' ? 'Bloqueado' : 'Pendente'; }
 function statusClass(s){ return s === 'aprovado' ? 'approved' : s === 'bloqueado' ? 'blocked' : 'pending'; }
@@ -215,14 +220,31 @@ async function processProviderImages(providerId, existing={}){
   let profileImage = existing.profileImage || '';
   const profileFile = $('profileImage').files?.[0];
   if(profileFile) profileImage = await uploadImage(profileFile, `providers/${currentUser?.id || 'local'}/${providerId}/perfil.jpg`);
-  let workImages = Array.isArray(existing.workImages) ? [...existing.workImages] : [];
-  const files = Array.from($('workImages').files || []).slice(0,3);
-  if(files.length){ workImages = []; for(let i=0;i<files.length;i++) workImages.push(await uploadImage(files[i], `providers/${currentUser?.id || 'local'}/${providerId}/trabalho-${i+1}.jpg`)); }
+
+  const currentPlan = existing.plan || 'gratis';
+  const limit = planPhotoLimit(currentPlan);
+  let workImages = Array.isArray(existing.workImages) ? [...existing.workImages].slice(0, limit) : [];
+  const selectedFiles = Array.from($('workImages').files || []);
+
+  if(selectedFiles.length && limit <= 0){
+    showToast('Seu plano atual permite apenas a foto principal. Para galeria, solicite Destaque ou Premium.');
+    workImages = [];
+  } else if(selectedFiles.length){
+    const files = selectedFiles.slice(0, limit);
+    if(selectedFiles.length > limit){
+      showToast(`Seu plano permite ${limit} foto${limit>1?'s':''} de trabalhos. As extras foram ignoradas.`);
+    }
+    workImages = [];
+    for(let i=0;i<files.length;i++){
+      workImages.push(await uploadImage(files[i], `providers/${currentUser?.id || 'local'}/${providerId}/trabalho-${i+1}.jpg`));
+    }
+  }
+
   return { profileImage, workImages };
 }
 function firstImage(p){ return p.profileImage || (Array.isArray(p.workImages) && p.workImages[0]) || ''; }
 function imageTag(src,alt){ return src ? `<img src="${src}" alt="${safeText(alt)}" loading="lazy">` : ''; }
-function providerGallery(p){ const imgs=[]; if(p.profileImage) imgs.push(p.profileImage); if(Array.isArray(p.workImages)) imgs.push(...p.workImages.filter(Boolean)); return imgs.length ? `<div class="gallery">${imgs.slice(0,4).map((img,i)=>imageTag(img,`${p.name} foto ${i+1}`)).join('')}</div>` : ''; }
+function providerGallery(p){ const imgs=[]; if(p.profileImage) imgs.push(p.profileImage); if(Array.isArray(p.workImages)) imgs.push(...p.workImages.filter(Boolean)); return imgs.length ? `<div class="gallery">${imgs.slice(0,11).map((img,i)=>imageTag(img,`${p.name} foto ${i+1}`)).join('')}</div>` : ''; }
 
 function renderCategories(){
   $('categoryGrid').innerHTML = categories.map(c=>`<div class="category-card" data-cat="${c.id}"><span>${c.icon}</span><strong>${c.name}</strong></div>`).join('');
@@ -513,6 +535,7 @@ function renderPlanCards(){
   el.innerHTML = Object.entries(planConfig).map(([key,plan])=>`<article class="plan-card ${planClass(key)}">
     <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
     <p>${safeText(plan.short)}</p>
+    <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
     <small>${safeText(plan.adminNote)}</small>
     <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
   </article>`).join('');
@@ -553,6 +576,7 @@ async function renderPlansPage(){
     return `<article class="plan-card ${planClass(key)}">
       <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
       <p>${safeText(plan.short)}</p>
+      <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
       <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
       ${providerAction}
     </article>`;
@@ -574,7 +598,22 @@ async function renderAdmin(){ renderPlanCards(); const providers=await getProvid
 
 function exportJson(filename,data){ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
 async function refreshAll(){ await renderCategories(); await renderFeatured(); if($('buscar').classList.contains('active-screen')) await renderProfessionals(); if($('admin').classList.contains('active-screen')) await renderAdmin(); if($('planos') && $('planos').classList.contains('active-screen')) await renderPlansPage(); if($('painel').classList.contains('active-screen')) await renderDashboard(); }
-function updateImagePreview(){ const total=($('profileImage')?.files?.length||0)+($('workImages')?.files?.length||0); $('imagePreview').textContent=total?`${total} nova(s) foto(s) selecionada(s).`:'Nenhuma nova foto selecionada.'; }
+async function updateImagePreview(){
+  const profileTotal = $('profileImage')?.files?.length || 0;
+  const workTotal = $('workImages')?.files?.length || 0;
+  let plan = 'gratis';
+  try{
+    const editId = $('editingProviderId')?.value || '';
+    const providers = currentUser ? await getProviders() : [];
+    const p = providers.find(x => x.id === editId || x.userId === currentUser?.id);
+    plan = p?.plan || 'gratis';
+  }catch(e){}
+  const limit = planPhotoLimit(plan);
+  const extra = workTotal && workTotal > limit ? ` Seu plano atual permite ${limit} foto${limit>1?'s':''} de trabalhos; as extras serão ignoradas.` : '';
+  $('imagePreview').textContent = (profileTotal || workTotal)
+    ? `${profileTotal ? '1 foto principal' : 'Sem nova foto principal'} • ${workTotal} foto(s) de trabalhos selecionada(s).${extra}`
+    : `Nenhuma nova foto selecionada. Seu plano atual permite: ${planPhotoText(plan)}.`;
+}
 function clearFilters(){ $('searchText').value=''; $('cityFilter').value=''; $('categoryFilter').value=''; $('planFilter').value=''; $('sortFilter').value='featured'; renderProfessionals(); }
 
 function bindEvents(){
