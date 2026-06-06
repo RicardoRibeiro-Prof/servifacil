@@ -196,12 +196,13 @@ function showScreen(id){
 }
 function providerBadges(p, admin=false, owner=false){
   const status=p.status||'aprovado';
-  const isBoosted = p.featured || p.plan === 'destaque' || p.plan === 'premium';
   const badges=[];
-  if(admin || owner){ badges.push(`<span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>`); }
-  else if(isBoosted){ badges.push('<span class="badge featured-plan">Destaque</span>'); }
-  if(p.active===false) badges.push('<span class="badge pending">Pausado</span>');
-  if(admin||owner) badges.push(`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`);
+  // No card público removemos selos redundantes. O cliente só precisa ver nome, serviço, cidade e contato.
+  if(admin || owner){
+    badges.push(`<span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>`);
+    badges.push(`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`);
+  }
+  if((admin || owner) && p.active===false) badges.push('<span class="badge pending">Pausado</span>');
   return badges.join('');
 }
 function providerMetaLine(p, admin=false, owner=false){
@@ -219,9 +220,9 @@ function providerCard(p, admin=false, owner=false){
       ${thumb?`<div class="card-thumb">${imageTag(thumb,p.name)}</div>`:''}
       <div class="pro-card-content">
         <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
-        <p>${safeText(p.description)}</p>
+        <p class="service-desc">${safeText(p.description)}</p>
         <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
-        <div class="profile-actions"><button data-profile="${p.id}">Ver perfil</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
+        <div class="profile-actions"><button data-profile="${p.id}">Ver detalhes</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
       </div>
     </div>
   </article>`;
@@ -239,7 +240,7 @@ async function renderFeatured(){
 }
 async function renderProfessionals(){
   if(isProviderUser()){
-    $('professionalList').innerHTML='<p class="empty-card muted">Seu acesso é de prestador. Use o Meu painel para gerenciar seu perfil e pedidos recebidos.</p>';
+    $('professionalList').innerHTML='<p class="empty-card muted">Use seu painel para gerenciar seu perfil e pedidos.</p>';
     return;
   }
   const text=$('searchText').value.toLowerCase().trim(), city=$('cityFilter').value.toLowerCase().trim(), cat=$('categoryFilter').value, plan=$('planFilter').value, sort=$('sortFilter').value;
@@ -255,9 +256,9 @@ async function openProfile(id){
   if(!isOwnerView) await upsertDoc('providers',p);
   const reviews=(await getReviews()).filter(r=>r.providerId===p.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const phone=String(p.whatsapp||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(p.category)}.`);
-  const profileBadges = `<span class="badge">${categoryName(p.category)}</span>${(p.featured || p.plan==='destaque' || p.plan==='premium') ? ' <span class="badge featured-plan">Destaque</span>' : ''}`;
+  const profileBadges = `<span class="badge">${categoryName(p.category)}</span>`;
   const ratingText = p.rating && Number(p.ratingCount||0)>0 ? `⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliação(ões))` : '⭐ Sem avaliações ainda';
-  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a><button data-request-for="${p.id}">Solicitar orçamento pelo app</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
+  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">WhatsApp</button></a><button data-request-for="${p.id}">Pedir orçamento</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
   showScreen('perfil'); renderFeatured();
 }
 function reviewCard(r){ return `<div class="review-card"><strong>⭐ ${safeText(r.rating)}</strong> <span>${safeText(r.clientName)}</span><p>${safeText(r.comment || 'Sem comentário.')}</p><small class="muted">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small></div>`; }
@@ -422,7 +423,7 @@ async function renderDashboard(){
   if(!currentUser){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Entre ou crie uma conta para acessar seu painel.</p><button data-go="login">Entrar agora</button></div>'; return; }
   if(isAdmin()){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Você está como administrador.</p><button data-go="admin">Abrir painel administrativo</button></div>'; return; }
   const requests=await getRequests(), providers=await getProviders();
-  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe suas solicitações e, se desejar, cadastre-se também como prestador.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
+  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe seus pedidos e seus dados.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
   const myProviders=providers.filter(p=>p.userId===currentUser.id); const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category); const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
   $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
 }
