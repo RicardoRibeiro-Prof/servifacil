@@ -133,3 +133,11 @@ V8.1.8 - Painel do prestador
 - Menu do prestador fica focado em Meu painel.
 - Buscar/Início/Pedidos públicos são ocultados para prestador.
 - Prestador acessa apenas o próprio perfil e pedidos recebidos.
+
+
+V9.2 MOBILE FIRST
+- Interface reorganizada pensando primeiro no celular.
+- Menu principal fixado embaixo, no padrão de aplicativo.
+- Cards mais compactos para tela pequena.
+- Categorias com rolagem horizontal.
+- Formulários e botões ajustados para toque.
