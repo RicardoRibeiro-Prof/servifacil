@@ -81,6 +81,29 @@ async function handleAuthState(userCredential){
   if(isProviderUser() && (active==='inicio' || active==='buscar' || active==='solicitacoes')) showScreen('painel');
 }
 function canManageProvider(user = currentUser){ return Boolean(user && (isAdmin(user) || user.role === 'prestador' || user.type === 'prestador')); }
+function isClientUser(user = currentUser){ return Boolean(user && !isAdmin(user) && !isProviderUser(user)); }
+function requireClientAccount(){
+  if(!currentUser){
+    showToast('Para falar com o prestador, crie uma conta ou entre no app.');
+    showScreen('login');
+    return false;
+  }
+  if(!isClientUser()){
+    showToast('O contato com prestadores é exclusivo para clientes cadastrados.');
+    showScreen(isAdmin() ? 'admin' : 'painel');
+    return false;
+  }
+  return true;
+}
+function contactBlock(p, phone, msg){
+  if(isClientUser()){
+    return `<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a><button data-request-for="${p.id}">Pedir orçamento</button></div>`;
+  }
+  if(!currentUser){
+    return `<div class="contact-lock"><strong>Cadastre-se para entrar em contato</strong><p>Para proteger clientes e prestadores, o WhatsApp e o pedido de orçamento ficam disponíveis apenas para usuários cadastrados.</p><button data-go="login">Entrar ou criar conta</button></div>`;
+  }
+  return `<div class="contact-lock"><strong>Contato disponível para clientes</strong><p>Prestadores e administradores podem visualizar o perfil, mas o contato comercial é liberado apenas para clientes cadastrados.</p></div>`;
+}
 
 function updateSessionUI(){
   const badge=$('userBadge'), logout=$('btnLogout'), mode=$('dataModeBadge');
@@ -181,6 +204,8 @@ function renderCategories(){
 function showScreen(id){
   if(id==='admin' && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
   if(id==='cadastro' && !currentUser){ showToast('Entre ou crie uma conta para oferecer seus serviços.'); id = 'login'; }
+  if(id==='solicitacoes' && !currentUser){ showToast('Para pedir orçamento, crie uma conta ou entre no app.'); id = 'login'; }
+  if(id==='solicitacoes' && currentUser && !isClientUser()){ showToast('A tela de pedidos é exclusiva para clientes.'); id = isAdmin() ? 'admin' : 'painel'; }
   if(isProviderUser() && (id==='inicio' || id==='buscar' || id==='solicitacoes')){
     id = 'painel';
   }
@@ -258,7 +283,7 @@ async function openProfile(id){
   const phone=String(p.whatsapp||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(p.category)}.`);
   const profileBadges = `<span class="badge">${categoryName(p.category)}</span>`;
   const ratingText = p.rating && Number(p.ratingCount||0)>0 ? `⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliação(ões))` : '⭐ Sem avaliações ainda';
-  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">WhatsApp</button></a><button data-request-for="${p.id}">Pedir orçamento</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
+  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}${contactBlock(p, phone, msg)}<div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
   showScreen('perfil'); renderFeatured();
 }
 function reviewCard(r){ return `<div class="review-card"><strong>⭐ ${safeText(r.rating)}</strong> <span>${safeText(r.clientName)}</span><p>${safeText(r.comment || 'Sem comentário.')}</p><small class="muted">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small></div>`; }
@@ -413,11 +438,32 @@ async function deleteProvider(id){ if(!isAdmin()) return showToast('Acesso negad
 
 async function renderRequestProviderOptions(){ const providers=await approvedProviders(); $('requestProvider').innerHTML='<option value="">Todos da categoria</option>'+providers.map(p=>`<option value="${p.id}">${safeText(p.name)} - ${safeText(p.city)}</option>`).join(''); }
 function fillRequestClient(){ if(currentUser && !$('requestClientName').value) $('requestClientName').value=currentUser.name||''; }
-async function saveRequest(event){ event.preventDefault(); const providerId=$('requestProvider').value; const provider=providerId?(await getProviders()).find(p=>p.id===providerId):null; const req={id:newId(), category:$('requestCategory').value, providerId:providerId||null, providerName:provider?.name||'', clientUserId:currentUser?.id||null, clientName:$('requestClientName').value.trim(), phone:$('requestPhone').value.trim(), location:$('requestLocation').value.trim(), desiredDate:$('requestDate').value, urgency:$('requestUrgency').value, description:$('requestDescription').value.trim(), status:'Aberto', createdAt:now()}; await upsertDoc('requests',req); $('requestForm').reset(); await renderRequests(); showToast('Solicitação enviada.'); }
-async function renderRequests(){ const list=(await getRequests()).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)); $('requestList').innerHTML=list.length?list.slice(0,10).map(r=>requestCard(r)).join(''):'<p class="empty-card muted">Nenhuma solicitação cadastrada ainda.</p>'; }
+async function saveRequest(event){
+  event.preventDefault();
+  if(!requireClientAccount()) return;
+  const providerId=$('requestProvider').value;
+  const provider=providerId?(await getProviders()).find(p=>p.id===providerId):null;
+  const clientName=$('requestClientName').value.trim() || currentUser.name || '';
+  const phone=$('requestPhone').value.trim();
+  const location=$('requestLocation').value.trim();
+  const description=$('requestDescription').value.trim();
+  if(!$('requestCategory').value || !clientName || !phone || !location || !description){ showToast('Preencha categoria, nome, telefone, localização e descrição.'); return; }
+  const req={id:newId(), category:$('requestCategory').value, providerId:providerId||null, providerName:provider?.name||'', clientUserId:currentUser.id, clientName, phone, location, desiredDate:$('requestDate').value, urgency:$('requestUrgency').value, description, status:'Aberto', createdAt:now()};
+  await upsertDoc('requests',req);
+  $('requestForm').reset();
+  fillRequestClient();
+  await renderRequests();
+  showToast('Solicitação enviada.');
+}
+async function renderRequests(){
+  if(!currentUser){ $('requestList').innerHTML='<p class="empty-card muted">Entre ou crie uma conta para enviar e acompanhar pedidos.</p>'; return; }
+  let list=(await getRequests()).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  if(isClientUser()) list=list.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase());
+  $('requestList').innerHTML=list.length?list.slice(0,10).map(r=>requestCard(r)).join(''):'<p class="empty-card muted">Nenhuma solicitação cadastrada ainda.</p>';
+}
 function requestCard(r, actions=false){ const phone=String(r.phone||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá ${r.clientName}, vi sua solicitação no ServiFácil sobre ${categoryName(r.category)}. Posso te passar um orçamento.`); return `<article class="request-card"><strong>${categoryName(r.category)}</strong><div class="request-meta"><span>${safeText(r.location)}</span><span>${safeText(r.status)}</span>${r.urgency?`<span>${safeText(r.urgency)}</span>`:''}${r.desiredDate?`<span>Data: ${new Date(r.desiredDate+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}${r.providerName?`<span>Para: ${safeText(r.providerName)}</span>`:'<span>Para todos da categoria</span>'}</div><p>${safeText(r.description)}</p><p class="muted">Cliente: ${safeText(r.clientName)} • ${new Date(r.createdAt).toLocaleDateString('pt-BR')}</p>${actions?`<div class="row-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank"><button class="whatsapp">Responder no WhatsApp</button></a><button data-done-request="${r.id}">Marcar atendido</button></div>`:''}</article>`; }
 async function markRequestDone(id){ const r=(await getRequests()).find(x=>x.id===id); if(!r) return; await upsertDoc('requests',{...r,status:'Atendido'}); await renderDashboard(); await renderRequests(); showToast('Solicitação marcada como atendida.'); }
-function startRequestForProvider(id){ $('requestProvider').value=id; showScreen('solicitacoes'); setTimeout(()=>$('requestProvider').value=id,100); }
+function startRequestForProvider(id){ if(!requireClientAccount()) return; $('requestProvider').value=id; showScreen('solicitacoes'); setTimeout(()=>$('requestProvider').value=id,100); }
 
 async function renderDashboard(){
   if(!currentUser){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Entre ou crie uma conta para acessar seu painel.</p><button data-go="login">Entrar agora</button></div>'; return; }

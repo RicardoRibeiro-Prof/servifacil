@@ -428,3 +428,16 @@ button, .tabs button, input, select, textarea{
     -webkit-line-clamp:3;
   }
 }
+
+.contact-lock{
+  margin-top:16px;
+  padding:16px;
+  border:1px solid #d7e6f5;
+  border-radius:18px;
+  background:#f8fbff;
+  color:#334155;
+}
+.contact-lock strong{display:block;color:#0f4c81;font-size:16px;margin-bottom:6px}
+.contact-lock p{margin:0 0 12px;line-height:1.45}
+.contact-lock button{width:auto}
+@media(max-width:620px){.contact-lock button{width:100%}}
