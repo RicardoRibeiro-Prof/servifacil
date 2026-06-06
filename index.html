@@ -48,58 +48,54 @@
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
 
-      <section class="home-plans">
-        <div class="section-head">
-          <div>
-            <h3>Planos para prestadores</h3>
-            <p>Escolha um plano para divulgar seus serviços e receber contatos de clientes cadastrados.</p>
-          </div>
-        </div>
+      <section class="home-plans-section">
+        <h3>Planos para prestadores</h3>
+        <p class="muted">Escolha como deseja divulgar seus serviços no ServiFácil.</p>
 
-        <div class="home-plan-grid">
-          <article class="home-plan-card free">
+        <div class="home-plans-grid">
+          <article class="home-plan-card plan-free">
             <span class="plan-badge">Entrada</span>
-            <div class="home-plan-title">
-              <strong>Plano Grátis</strong>
-              <span>R$ 0,00</span>
+            <div class="plan-title-row">
+              <h4>Plano Grátis</h4>
+              <strong>R$ 0,00</strong>
             </div>
             <p>Perfil básico para começar.</p>
             <ul>
               <li>1 foto principal</li>
               <li>Aparece na busca</li>
-              <li>Contato via WhatsApp</li>
+              <li>Contato via WhatsApp para clientes cadastrados</li>
             </ul>
-            <button class="outline" data-pay-plan="gratis">Escolher Grátis</button>
+            <button class="outline" data-home-plan="gratis">Começar grátis</button>
           </article>
 
-          <article class="home-plan-card destaque">
+          <article class="home-plan-card plan-highlight">
             <span class="plan-badge">Mais escolhido</span>
-            <div class="home-plan-title">
-              <strong>Plano Destaque</strong>
-              <span>R$ 19,90/mês</span>
+            <div class="plan-title-row">
+              <h4>Plano Destaque</h4>
+              <strong>R$ 19,90/mês</strong>
             </div>
             <p>Mais visibilidade para receber contatos.</p>
             <ul>
-              <li>1 foto principal + até 3 fotos</li>
-              <li>Aparece em destaques</li>
-              <li>Prioridade acima do grátis</li>
+              <li>1 foto principal + até 3 fotos de trabalhos</li>
+              <li>Aparece em destaques da região</li>
+              <li>Prioridade acima do plano grátis</li>
             </ul>
-            <button class="secondary" data-pay-plan="destaque">Pagar Destaque</button>
+            <button class="secondary" data-home-plan="destaque">Escolher destaque</button>
           </article>
 
-          <article class="home-plan-card premium">
+          <article class="home-plan-card plan-premium">
             <span class="plan-badge">Mais completo</span>
-            <div class="home-plan-title">
-              <strong>Plano Premium</strong>
-              <span>R$ 39,90/mês</span>
+            <div class="plan-title-row">
+              <h4>Plano Premium</h4>
+              <strong>R$ 39,90/mês</strong>
             </div>
             <p>Prioridade máxima no app.</p>
             <ul>
-              <li>1 foto principal + até 10 fotos</li>
-              <li>Prioridade máxima</li>
-              <li>Galeria completa do serviço</li>
+              <li>1 foto principal + até 10 fotos de trabalhos</li>
+              <li>Prioridade máxima na listagem</li>
+              <li>Galeria completa para mostrar portfólio</li>
             </ul>
-            <button class="success" data-pay-plan="premium">Pagar Premium</button>
+            <button class="success" data-home-plan="premium">Escolher premium</button>
           </article>
         </div>
       </section>
@@ -204,20 +200,6 @@
         <label>Descrição dos serviços
           <textarea required id="description" rows="5" placeholder="Explique o que você faz, sua experiência e os tipos de serviço que atende."></textarea>
         </label>
-        <label>Escolha seu plano
-          <select id="providerPlan">
-            <option value="gratis">Plano Grátis — 1 foto principal</option>
-            <option value="destaque">Plano Destaque — 1 foto principal + até 3 fotos de trabalhos</option>
-            <option value="premium">Plano Premium — 1 foto principal + até 10 fotos de trabalhos</option>
-          </select>
-          <small class="muted">Selecione o plano desejado já no cadastro. O plano define sua visibilidade e o limite de fotos do perfil.</small>
-        </label>
-        <div class="photo-guidelines plan-quick-guide">
-          <strong>Resumo rápido dos planos</strong>
-          <span><strong>Grátis:</strong> aparece na busca e permite 1 foto principal.</span>
-          <span><strong>Destaque:</strong> aparece em destaques da região e libera até 3 fotos de trabalhos.</span>
-          <span><strong>Premium:</strong> prioridade máxima no app e até 10 fotos de trabalhos.</span>
-        </div>
         <label>Foto principal do perfil
           <input id="profileImage" type="file" accept="image/*" />
           <small class="muted">Recomendado: foto quadrada 800 x 800 px, formato JPG ou PNG, com até 1 MB. Use uma foto clara, bem enquadrada e com fundo simples.</small>

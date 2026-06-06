@@ -1,14 +1,15 @@
 const ADMIN_EMAIL = 'admin@servifacil.com';
 const ADMIN_TEST_PASSWORD = '123456';
 
-// Configure aqui os links reais de pagamento.
-// Cole links do Mercado Pago, Pix, Asaas, PagSeguro ou outro checkout.
+// Links de pagamento dos planos.
+// Para usar Mercado Pago, Asaas, PagSeguro ou Pix Copia e Cola via página externa,
+// cole o link real abaixo. Enquanto estiver vazio, o app abre uma tela com WhatsApp.
 const PAYMENT_LINKS = {
   gratis: '',
   destaque: '',
   premium: ''
 };
-const PAYMENT_WHATSAPP = '5589999999999'; // troque pelo WhatsApp do administrador
+const PAYMENT_WHATSAPP = '5589999999999';
 
 const categories = [
   { id: 'construcao', name: 'Casa e construção', icon: '🏠' },
@@ -408,7 +409,6 @@ async function saveProvider(event){
   const city = $('city').value.trim();
   const whatsapp = $('whatsapp').value.trim();
   const description = $('description').value.trim();
-  const selectedPlan = $('providerPlan')?.value || 'gratis';
 
   if(!name || !category || !city || !whatsapp || !description){
     showToast('Preencha nome, categoria, cidade, WhatsApp e descrição.');
@@ -467,8 +467,8 @@ async function saveProvider(event){
       photoUrl:imgs.profileImage || old?.photoUrl || '',
       status:old?.status || (isAdmin()?'aprovado':'pendente'),
       active:old?.active ?? true,
-      plan:selectedPlan || old?.plan || 'gratis',
-      featured:(selectedPlan === 'destaque' || selectedPlan === 'premium'),
+      plan:old?.plan || 'gratis',
+      featured:old?.featured || false,
       rating:old?.rating || null,
       ratingCount:old?.ratingCount || 0,
       views:old?.views || 0,
@@ -499,7 +499,7 @@ async function saveProvider(event){
     showToast(msg);
   }
 }
-async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id){ showToast('Você não tem permissão para editar este perfil.'); return; } $('editingProviderId').value=p.id; $('name').value=p.name||''; $('category').value=p.category||''; $('city').value=p.city||''; $('neighborhood').value=p.neighborhood||''; $('whatsapp').value=p.whatsapp||''; $('price').value=p.price||''; $('description').value=p.description||''; $('providerPlan').value=p.plan || 'gratis'; $('photo').value=p.photo||''; $('providerSubmitButton').textContent='Salvar alterações'; $('cancelEditProvider').classList.remove('hidden'); updateImagePreview(); showScreen('cadastro'); }
+async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id){ showToast('Você não tem permissão para editar este perfil.'); return; } $('editingProviderId').value=p.id; $('name').value=p.name||''; $('category').value=p.category||''; $('city').value=p.city||''; $('neighborhood').value=p.neighborhood||''; $('whatsapp').value=p.whatsapp||''; $('price').value=p.price||''; $('description').value=p.description||''; $('photo').value=p.photo||''; $('providerSubmitButton').textContent='Salvar alterações'; $('cancelEditProvider').classList.remove('hidden'); updateImagePreview(); showScreen('cadastro'); }
 function cancelProviderEdit(toast=true){ $('providerForm').reset(); $('editingProviderId').value=''; $('providerSubmitButton').textContent='Cadastrar serviço'; $('cancelEditProvider').classList.add('hidden'); updateImagePreview(); if(toast) showToast('Edição cancelada.'); }
 async function toggleProviderActive(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id) return showToast('Sem permissão.'); await upsertDoc('providers',{...p,active:p.active===false}); await refreshAll(); showToast(p.active===false?'Perfil ativado.':'Perfil pausado.'); }
 async function updateProviderStatus(id,status){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,status}); await refreshAll(); showToast(`Prestador ${statusLabel(status).toLowerCase()}.`); }
@@ -547,8 +547,7 @@ async function renderDashboard(){
 function renderPlanCards(){
   const el=$('planConfigCards');
   if(!el) return;
-  const visiblePlans = ['gratis','destaque','premium'];
-  el.innerHTML = visiblePlans.map(key => { const plan = planConfig[key]; return `<article class="plan-card ${planClass(key)}">
+  el.innerHTML = planOrder.map(key => { const plan = planConfig[key]; return `<article class="plan-card ${planClass(key)}">
     <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
     <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
     <p>${safeText(plan.short)}</p>
@@ -580,13 +579,11 @@ async function requestProviderPlan(plan){
 async function renderPlansPage(){
   const el=$('plansPageCards');
   if(!el) return;
-  el.className = 'plans-page-list';
   const providers = currentUser ? await getProviders() : [];
   const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
   const currentPlan = mine[0]?.plan || 'gratis';
   const requestedPlan = mine[0]?.planRequest || '';
-  const visiblePlans = ['gratis','destaque','premium'];
-  el.innerHTML = visiblePlans.map(key => { const plan = planConfig[key];
+  el.innerHTML = planOrder.map(key => { const plan = planConfig[key];
     const isCurrent = isProviderUser() && key === currentPlan;
     const isRequested = isProviderUser() && key === requestedPlan && key !== currentPlan;
     const providerAction = isProviderUser()
@@ -621,12 +618,12 @@ async function refreshAll(){ await renderCategories(); await renderFeatured(); i
 async function updateImagePreview(){
   const profileTotal = $('profileImage')?.files?.length || 0;
   const workTotal = $('workImages')?.files?.length || 0;
-  let plan = $('providerPlan')?.value || 'gratis';
+  let plan = 'gratis';
   try{
     const editId = $('editingProviderId')?.value || '';
     const providers = currentUser ? await getProviders() : [];
     const p = providers.find(x => x.id === editId || x.userId === currentUser?.id);
-    plan = $('providerPlan')?.value || p?.plan || 'gratis';
+    plan = p?.plan || 'gratis';
   }catch(e){}
   const limit = planPhotoLimit(plan);
   const extra = workTotal && workTotal > limit ? ` Seu plano atual permite ${limit} foto${limit>1?'s':''} de trabalhos; as extras serão ignoradas.` : '';
@@ -637,52 +634,47 @@ async function updateImagePreview(){
 function clearFilters(){ $('searchText').value=''; $('cityFilter').value=''; $('categoryFilter').value=''; $('planFilter').value=''; $('sortFilter').value='featured'; renderProfessionals(); }
 
 
-function openPaymentPlan(plan){
-  const cfg = planConfig[plan] || planConfig.gratis;
-  const link = PAYMENT_LINKS[plan];
-
+function selectHomePlan(plan){
   if(plan === 'gratis'){
-    if(currentUser && !isProviderUser() && !isAdmin()){
-      showScreen('cadastro');
-      showToast('Preencha seus dados para ativar o Plano Grátis.');
-      const sel = $('providerPlan'); if(sel) sel.value = 'gratis';
-      updateImagePreview();
-      return;
-    }
     showScreen('cadastro');
-    const sel = $('providerPlan'); if(sel) sel.value = 'gratis';
-    updateImagePreview();
+    const planSelect = $('providerPlan');
+    if(planSelect){ planSelect.value = 'gratis'; updateImagePreview(); }
+    showToast('Preencha seu cadastro para começar no Plano Grátis.');
     return;
   }
 
-  if(link && link.trim()){
-    window.open(link.trim(), '_blank');
+  const directLink = PAYMENT_LINKS[plan];
+  if(directLink && directLink.trim()){
+    window.open(directLink.trim(), '_blank', 'noopener');
     return;
   }
 
-  showPaymentScreen(plan);
+  showPaymentPlan(plan);
 }
 
-function showPaymentScreen(plan){
+function showPaymentPlan(plan){
   const cfg = planConfig[plan] || planConfig.destaque;
-  const whatsappMsg = encodeURIComponent(`Olá! Quero assinar o ${cfg.name} do ServiFácil (${cfg.price}).`);
-  const wa = `https://wa.me/${PAYMENT_WHATSAPP}?text=${whatsappMsg}`;
+  const text = encodeURIComponent(`Olá! Quero assinar o ${cfg.name} do ServiFácil (${cfg.price}).`);
+  const waLink = `https://wa.me/${PAYMENT_WHATSAPP}?text=${text}`;
 
-  $('paymentBox').innerHTML = `
-    <div class="payment-card">
-      <span class="plan-badge">${safeText(cfg.badge || 'Plano')}</span>
+  const box = $('paymentBox');
+  if(!box) return;
+
+  box.innerHTML = `
+    <article class="payment-card ${planClass(plan)}">
+      <span class="plan-badge">${safeText(cfg.badge || cfg.name)}</span>
       <h4>${safeText(cfg.name)}</h4>
       <strong class="payment-price">${safeText(cfg.price)}</strong>
       <p>${safeText(cfg.short)}</p>
       <div class="plan-photo-limit">📷 ${safeText(planPhotoText(plan))}</div>
-      <ul>${cfg.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
+      <ul>${cfg.features.map(item => `<li>${safeText(item)}</li>`).join('')}</ul>
       <div class="notice small">
-        Pagamento ainda não integrado automaticamente. Clique no botão abaixo para solicitar o pagamento ao administrador.
-        Depois, o administrador aprova seu plano no painel.
+        O pagamento automático ainda não foi integrado. Use o botão abaixo para solicitar o pagamento ao administrador. Depois da confirmação, o administrador ativa o plano.
       </div>
-      <a class="button-link primary" href="${wa}" target="_blank" rel="noopener">Solicitar pagamento pelo WhatsApp</a>
-    </div>
+      <a class="payment-button" href="${waLink}" target="_blank" rel="noopener">Solicitar pagamento pelo WhatsApp</a>
+    </article>
   `;
+
   showScreen('pagamento');
 }
 
@@ -690,7 +682,7 @@ function bindEvents(){
   document.body.addEventListener('click', async e=>{
     const go=e.target.closest('[data-go]')?.dataset.go; if(go){ showScreen(go); return; }
     const screen=e.target.closest('.tabs button')?.dataset.screen; if(screen){ showScreen(screen); return; }
-    const pay=e.target.closest('[data-pay-plan]')?.dataset.payPlan; if(pay){ openPaymentPlan(pay); return; }
+    const homePlan=e.target.closest('[data-home-plan]')?.dataset.homePlan; if(homePlan){ selectHomePlan(homePlan); return; }
     const cat=e.target.closest('[data-cat]')?.dataset.cat; if(cat){ $('categoryFilter').value=cat; showScreen('buscar'); return; }
     const prof=e.target.closest('[data-profile]')?.dataset.profile; if(prof){ await openProfile(prof); return; }
     const edit=e.target.closest('[data-edit]')?.dataset.edit; if(edit){ await editProvider(edit); return; }
@@ -711,7 +703,7 @@ function bindEvents(){
   $('cancelEditProvider').addEventListener('click', ()=>cancelProviderEdit());
   $('clearFilters').addEventListener('click', clearFilters);
   ['searchText','cityFilter','categoryFilter','planFilter','sortFilter'].forEach(id=>$(id).addEventListener('input', renderProfessionals));
-  $('profileImage').addEventListener('change', updateImagePreview); $('workImages').addEventListener('change', updateImagePreview); $('providerPlan').addEventListener('change', updateImagePreview);
+  $('profileImage').addEventListener('change', updateImagePreview); $('workImages').addEventListener('change', updateImagePreview);
   $('exportProviders').addEventListener('click', async()=>exportJson('prestadores-servifacil.json', await getProviders()));
   $('exportRequests').addEventListener('click', async()=>exportJson('solicitacoes-servifacil.json', await getRequests()));
   $('exportReviews').addEventListener('click', async()=>exportJson('avaliacoes-servifacil.json', await getReviews()));
