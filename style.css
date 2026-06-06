@@ -441,3 +441,49 @@ button, .tabs button, input, select, textarea{
 .contact-lock p{margin:0 0 12px;line-height:1.45}
 .contact-lock button{width:auto}
 @media(max-width:620px){.contact-lock button{width:100%}}
+
+
+/* V9.5 - configuração de planos */
+.plan-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap:14px;
+  margin: 10px 0 14px;
+}
+.plan-card{
+  background:#fff;
+  border:1px solid #dbe7f3;
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 10px 28px rgba(15,76,129,.06);
+}
+.plan-card-head{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+  margin-bottom:8px;
+}
+.plan-card-head strong{font-size:1.05rem;color:#0b1b33;}
+.plan-card-head span{font-weight:800;color:#0f4c81;white-space:nowrap;}
+.plan-card p{margin:6px 0;color:#24364b;font-weight:700;}
+.plan-card small{display:block;color:#61718a;margin-bottom:10px;line-height:1.35;}
+.plan-card ul{margin:0;padding-left:18px;color:#24364b;line-height:1.5;}
+.plan-status-card{
+  background:linear-gradient(135deg,#ffffff,#eef7ff);
+  border:1px solid #dbe7f3;
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:16px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.plan-status-card strong{font-size:1.05rem;color:#0b1b33;}
+.plan-status-card span{font-weight:800;color:#0f4c81;}
+.plan-status-card p{margin:0;color:#61718a;}
+@media(max-width:780px){
+  .plan-grid{grid-template-columns:1fr;}
+  .plan-card{padding:14px;}
+  .plan-card-head{flex-direction:column;}
+}

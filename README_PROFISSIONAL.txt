@@ -144,3 +144,11 @@ V9.2 MOBILE FIRST
 
 
 V9.3: correção mobile para cards sem foto não ficarem espremidos.
+
+
+V9.5 - Planos configurados
+- Plano Grátis: R$ 0,00
+- Plano Destaque: R$ 19,90/mês
+- Plano Premium: R$ 39,90/mês
+- Cobrança ainda manual pelo administrador.
+- Admin define o plano do prestador pelo painel administrativo.

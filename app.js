@@ -10,6 +10,31 @@ const categories = [
   { id: 'entregas', name: 'Entregas e transporte', icon: '🛵' }
 ];
 
+
+const planConfig = {
+  gratis: {
+    name: 'Plano Grátis',
+    price: 'R$ 0,00',
+    short: 'Perfil básico para começar',
+    adminNote: 'Aparece na busca, sem prioridade nos destaques.',
+    features: ['Perfil público aprovado', 'Contato via WhatsApp para clientes cadastrados', 'Até 1 foto principal']
+  },
+  destaque: {
+    name: 'Plano Destaque',
+    price: 'R$ 19,90/mês',
+    short: 'Mais visibilidade na região',
+    adminNote: 'Aparece nos destaques e acima do plano grátis.',
+    features: ['Tudo do plano grátis', 'Aparece em Destaques da sua região', 'Selo de destaque', 'Prioridade na listagem']
+  },
+  premium: {
+    name: 'Plano Premium',
+    price: 'R$ 39,90/mês',
+    short: 'Prioridade máxima no app',
+    adminNote: 'Melhor posição e maior prioridade nas buscas.',
+    features: ['Tudo do plano destaque', 'Prioridade máxima na ordenação', 'Mais força nas buscas', 'Melhor opção para profissionais ativos']
+  }
+};
+
 const sampleProviders = [
   { id:'sample-provider-1', userId:null, name:'João Silva', category:'construcao', city:'São Raimundo Nonato - PI', neighborhood:'Centro', whatsapp:'5589999999999', price:'A partir de R$ 50,00', description:'Eletricista residencial. Faço instalação de tomadas, troca de chuveiro, manutenção em disjuntores e instalação de iluminação.', rating:4.8, ratingCount:12, views:0, plan:'destaque', featured:true, status:'aprovado', active:true, workImages:[], createdAt:new Date().toISOString() },
   { id:'sample-provider-2', userId:null, name:'Maria Designer', category:'tecnologia', city:'São Raimundo Nonato - PI', neighborhood:'Centro', whatsapp:'5589999999999', price:'Artes a partir de R$ 30,00', description:'Criação de artes para Instagram, cartões digitais, logotipos simples e materiais para divulgação.', rating:4.9, ratingCount:8, views:0, plan:'premium', featured:true, status:'aprovado', active:true, workImages:[], createdAt:new Date().toISOString() }
@@ -29,8 +54,11 @@ function moneySafe(v){ return safeText(v || ''); }
 function displayPrice(p){ return p && p.price && String(p.price).trim() ? moneySafe(p.price) : 'Preço sob orçamento'; }
 function safeText(value){ return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char])); }
 function categoryName(id){ return categories.find(c => c.id === id)?.name || 'Categoria'; }
-function planLabel(plan){ return plan === 'premium' ? 'Premium' : plan === 'destaque' ? 'Destaque' : 'Grátis'; }
+function planLabel(plan){ return planConfig[plan]?.name?.replace('Plano ','') || 'Grátis'; }
 function planClass(plan){ return plan === 'premium' ? 'premium' : plan === 'destaque' ? 'featured-plan' : 'free-plan'; }
+function planFullName(plan){ return planConfig[plan]?.name || 'Plano Grátis'; }
+function planPrice(plan){ return planConfig[plan]?.price || 'R$ 0,00'; }
+function planSummary(plan){ return planConfig[plan]?.short || 'Perfil básico'; }
 function planWeight(p){ const plan = p.plan || (p.featured ? 'destaque':'gratis'); return plan === 'premium' ? 3 : plan === 'destaque' ? 2 : 1; }
 function statusLabel(s){ return s === 'aprovado' ? 'Aprovado' : s === 'bloqueado' ? 'Bloqueado' : 'Pendente'; }
 function statusClass(s){ return s === 'aprovado' ? 'approved' : s === 'bloqueado' ? 'blocked' : 'pending'; }
@@ -253,7 +281,7 @@ function providerCard(p, admin=false, owner=false){
   </article>`;
 }
 function ownerButtons(p){ return `<button class="secondary" data-edit="${p.id}">Editar perfil</button><button class="outline" data-toggle-active="${p.id}">${p.active===false?'Ativar perfil':'Pausar perfil'}</button>`; }
-function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Plano grátis</button><button class="secondary" data-plan="${p.id}|destaque">Plano destaque</button><button class="success" data-plan="${p.id}|premium">Plano premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
+function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Definir grátis</button><button class="secondary" data-plan="${p.id}|destaque">Definir destaque</button><button class="success" data-plan="${p.id}|premium">Definir premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
 async function renderFeatured(){
   if(isProviderUser()){
     const mine=(await getProviders()).filter(p=>p.userId===currentUser.id);
@@ -433,7 +461,7 @@ async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===i
 function cancelProviderEdit(toast=true){ $('providerForm').reset(); $('editingProviderId').value=''; $('providerSubmitButton').textContent='Cadastrar serviço'; $('cancelEditProvider').classList.add('hidden'); updateImagePreview(); if(toast) showToast('Edição cancelada.'); }
 async function toggleProviderActive(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id) return showToast('Sem permissão.'); await upsertDoc('providers',{...p,active:p.active===false}); await refreshAll(); showToast(p.active===false?'Perfil ativado.':'Perfil pausado.'); }
 async function updateProviderStatus(id,status){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,status}); await refreshAll(); showToast(`Prestador ${statusLabel(status).toLowerCase()}.`); }
-async function updateProviderPlan(id,plan){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,plan,featured:plan==='destaque'||plan==='premium'}); await refreshAll(); showToast('Plano atualizado.'); }
+async function updateProviderPlan(id,plan){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,plan,featured:plan==='destaque'||plan==='premium'}); await refreshAll(); showToast('Plano atualizado para ' + planFullName(plan) + '.'); }
 async function deleteProvider(id){ if(!isAdmin()) return showToast('Acesso negado.'); if(!confirm('Excluir este prestador?')) return; await deleteDoc('providers',id); await refreshAll(); showToast('Prestador excluído.'); }
 
 async function renderRequestProviderOptions(){ const providers=await approvedProviders(); $('requestProvider').innerHTML='<option value="">Todos da categoria</option>'+providers.map(p=>`<option value="${p.id}">${safeText(p.name)} - ${safeText(p.city)}</option>`).join(''); }
@@ -471,9 +499,21 @@ async function renderDashboard(){
   const requests=await getRequests(), providers=await getProviders();
   if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe seus pedidos e seus dados.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
   const myProviders=providers.filter(p=>p.userId===currentUser.id); const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category); const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
-  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
+  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meu plano</h4><div class="plan-status-card"><strong>${planFullName(myProviders[0]?.plan || 'gratis')}</strong><span>${planPrice(myProviders[0]?.plan || 'gratis')}</span><p>${planSummary(myProviders[0]?.plan || 'gratis')}</p></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
 }
-async function renderAdmin(){ const providers=await getProviders(), requests=await getRequests(); $('totalProviders').textContent=providers.length; $('pendingProviders').textContent=providers.filter(p=>p.status==='pendente').length; $('totalRequests').textContent=requests.length; $('totalFeatured').textContent=providers.filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').length; if(!isAdmin()){ $('adminList').innerHTML='<p class="empty-card muted">Acesse com a conta admin para gerenciar o app.</p>'; return; } $('adminList').innerHTML=providers.length?providers.sort((a,b)=>(a.status==='pendente'?-1:1)).map(p=>providerCard(p,true)).join(''):'<p class="empty-card muted">Nenhum prestador cadastrado.</p>'; }
+
+function renderPlanCards(){
+  const el=$('planConfigCards');
+  if(!el) return;
+  el.innerHTML = Object.entries(planConfig).map(([key,plan])=>`<article class="plan-card ${planClass(key)}">
+    <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
+    <p>${safeText(plan.short)}</p>
+    <small>${safeText(plan.adminNote)}</small>
+    <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
+  </article>`).join('');
+}
+
+async function renderAdmin(){ renderPlanCards(); const providers=await getProviders(), requests=await getRequests(); $('totalProviders').textContent=providers.length; $('pendingProviders').textContent=providers.filter(p=>p.status==='pendente').length; $('totalRequests').textContent=requests.length; $('totalFeatured').textContent=providers.filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').length; if(!isAdmin()){ $('adminList').innerHTML='<p class="empty-card muted">Acesse com a conta admin para gerenciar o app.</p>'; return; } $('adminList').innerHTML=providers.length?providers.sort((a,b)=>(a.status==='pendente'?-1:1)).map(p=>providerCard(p,true)).join(''):'<p class="empty-card muted">Nenhum prestador cadastrado.</p>'; }
 
 function exportJson(filename,data){ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
 async function refreshAll(){ await renderCategories(); await renderFeatured(); if($('buscar').classList.contains('active-screen')) await renderProfessionals(); if($('admin').classList.contains('active-screen')) await renderAdmin(); if($('painel').classList.contains('active-screen')) await renderDashboard(); }
