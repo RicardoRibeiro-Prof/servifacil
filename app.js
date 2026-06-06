@@ -298,6 +298,46 @@ function providerMetaLine(p, admin=false, owner=false){
   if(admin || owner) parts.push(`👁️ ${Number(p.views||0)} visualizações`);
   return parts.join(' • ');
 }
+
+function hasProviderPhotos(p){
+  return Boolean(p.profileImage || (Array.isArray(p.workImages) && p.workImages.filter(Boolean).length));
+}
+
+function providerPhotoViewer(p){
+  const imgs = [];
+  if(p.profileImage) imgs.push(p.profileImage);
+  if(Array.isArray(p.workImages)) imgs.push(...p.workImages.filter(Boolean));
+  if(!imgs.length){
+    showToast('Este prestador ainda não adicionou fotos.');
+    return;
+  }
+
+  const html = `
+    <div class="photo-modal-content">
+      <button class="photo-modal-close" data-close-photos>×</button>
+      <h3>Fotos de ${safeText(p.name)}</h3>
+      <p class="muted">${categoryName(p.category)} • ${safeText(p.city || '')}</p>
+      <div class="photo-modal-grid">
+        ${imgs.slice(0, 11).map((img, i) => `
+          <a href="${img}" target="_blank" rel="noopener" class="photo-modal-item">
+            ${imageTag(img, `${p.name} foto ${i+1}`)}
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  let modal = $('photoModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'photoModal';
+    modal.className = 'photo-modal hidden';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
 function providerCard(p, admin=false, owner=false){
   const thumb=firstImage(p);
   return `<article class="pro-card ${p.active===false?'is-paused':''}">
@@ -307,7 +347,7 @@ function providerCard(p, admin=false, owner=false){
         <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
         <p class="service-desc">${safeText(p.description)}</p>
         <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
-        <div class="profile-actions"><button data-profile="${p.id}">Ver detalhes</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
+        <div class="profile-actions"><button data-profile="${p.id}">Ver detalhes</button>${hasProviderPhotos(p)?`<button class="outline" data-view-photos="${p.id}">Ver fotos</button>`:'' }${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
       </div>
     </div>
   </article>`;
@@ -625,6 +665,8 @@ function bindEvents(){
     const chosenPlan=e.target.closest('[data-plan-choice]')?.dataset.planChoice; if(chosenPlan){ await choosePlanFromStaticPage(chosenPlan); return; }
     const cat=e.target.closest('[data-cat]')?.dataset.cat; if(cat){ $('categoryFilter').value=cat; showScreen('buscar'); return; }
     const prof=e.target.closest('[data-profile]')?.dataset.profile; if(prof){ await openProfile(prof); return; }
+    const viewPhotos=e.target.closest('[data-view-photos]')?.dataset.viewPhotos; if(viewPhotos){ const p=(await getProviders()).find(x=>x.id===viewPhotos); if(p) providerPhotoViewer(p); return; }
+    if(e.target.closest('[data-close-photos]') || e.target.id === 'photoModal'){ $('photoModal')?.classList.add('hidden'); return; }
     const edit=e.target.closest('[data-edit]')?.dataset.edit; if(edit){ await editProvider(edit); return; }
     const active=e.target.closest('[data-toggle-active]')?.dataset.toggleActive; if(active){ await toggleProviderActive(active); return; }
     const status=e.target.closest('[data-status]')?.dataset.status; if(status){ const [id,s]=status.split('|'); await updateProviderStatus(id,s); return; }
@@ -650,6 +692,7 @@ function bindEvents(){
   window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); deferredInstallPrompt=e; $('btnInstall').classList.remove('hidden'); });
   $('btnInstall').addEventListener('click', async()=>{ if(!deferredInstallPrompt) return; deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt=null; $('btnInstall').classList.add('hidden'); });
 }
+window.addEventListener('keydown', e=>{ if(e.key === 'Escape') $('photoModal')?.classList.add('hidden'); });
 function authError(err){ const code=err?.code||''; if(code.includes('email-already-in-use')) return 'Este e-mail já está cadastrado.'; if(code.includes('weak-password')) return 'Use uma senha com pelo menos 6 caracteres.'; if(code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found')) return 'E-mail ou senha inválidos.'; if(code.includes('operation-not-allowed')) return 'Ative Email/Senha no Firebase Authentication.'; return err?.message || 'Erro ao executar ação.'; }
 
 async function init(){ bindEvents(); renderCategories(); await initFirebase(); await refreshAll(); if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js').catch(()=>{}); } }
