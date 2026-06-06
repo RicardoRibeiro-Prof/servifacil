@@ -30,6 +30,7 @@
         <div class="hero-actions">
           <button data-go="buscar">Buscar serviço</button>
           <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
+          <button class="outline" data-go="planos">Ver planos</button>
           <button id="heroLoginButton" class="outline" data-go="login">Entrar / Criar conta</button>
         </div>
       </div>
@@ -45,69 +46,10 @@
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <h3>Categorias populares</h3>
+<h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
-
-      <section class="home-plans-section">
-        <h3>Planos para prestadores</h3>
-        <p class="muted">Escolha como deseja divulgar seus serviços no ServiFácil.</p>
-
-        <div class="home-plans-grid">
-          <article class="home-plan-card plan-free">
-            <span class="plan-badge">Entrada</span>
-            <div class="plan-title-row">
-              <h4>Plano Grátis</h4>
-              <strong>R$ 0,00</strong>
-            </div>
-            <p>Perfil básico para começar.</p>
-            <ul>
-              <li>1 foto principal</li>
-              <li>Aparece na busca</li>
-              <li>Contato via WhatsApp para clientes cadastrados</li>
-            </ul>
-            <button class="outline" data-home-plan="gratis">Começar grátis</button>
-          </article>
-
-          <article class="home-plan-card plan-highlight">
-            <span class="plan-badge">Mais escolhido</span>
-            <div class="plan-title-row">
-              <h4>Plano Destaque</h4>
-              <strong>R$ 19,90/mês</strong>
-            </div>
-            <p>Mais visibilidade para receber contatos.</p>
-            <ul>
-              <li>1 foto principal + até 3 fotos de trabalhos</li>
-              <li>Aparece em destaques da região</li>
-              <li>Prioridade acima do plano grátis</li>
-            </ul>
-            <button class="secondary" data-home-plan="destaque">Escolher destaque</button>
-          </article>
-
-          <article class="home-plan-card plan-premium">
-            <span class="plan-badge">Mais completo</span>
-            <div class="plan-title-row">
-              <h4>Plano Premium</h4>
-              <strong>R$ 39,90/mês</strong>
-            </div>
-            <p>Prioridade máxima no app.</p>
-            <ul>
-              <li>1 foto principal + até 10 fotos de trabalhos</li>
-              <li>Prioridade máxima na listagem</li>
-              <li>Galeria completa para mostrar portfólio</li>
-            </ul>
-            <button class="success" data-home-plan="premium">Escolher premium</button>
-          </article>
-        </div>
-      </section>
-
       <h3>Destaques da sua região</h3>
       <div id="featuredList" class="cards"></div>
-    </section>
-
-    <section id="pagamento" class="screen">
-      <button class="back" data-go="inicio">← Voltar</button>
-      <h3>Pagamento do plano</h3>
-      <div id="paymentBox" class="payment-box"></div>
     </section>
 
     <section id="login" class="screen">
@@ -282,12 +224,68 @@
 
 
     <section id="planos" class="screen">
+      <button class="back" data-go="inicio">← Voltar</button>
       <h3>Planos para prestadores</h3>
-      <p class="muted">São 3 opções: Grátis, Destaque e Premium.</p>
-      <div class="notice small">Compare os 3 planos disponíveis, veja o limite de fotos de cada um e escolha o melhor para divulgar seus serviços.</div>
-      <div id="plansPageCards" class="plan-grid"></div>
-      <h4>Informações do plano</h4>
-      <div id="plansInfoBox" class="empty-card"></div>
+      <p class="muted">Escolha o plano ideal para divulgar seus serviços no ServiFácil.</p>
+
+      <div class="plans-only-grid">
+        <article class="plan-card free-plan">
+          <div class="plan-badge">Entrada</div>
+          <div class="plan-card-head">
+            <strong>Plano Grátis</strong>
+            <span>R$ 0,00</span>
+          </div>
+          <p>Perfil básico para começar</p>
+          <div class="plan-photo-limit">📷 1 foto principal</div>
+          <ul>
+            <li>Perfil público aprovado</li>
+            <li>Aparece na busca</li>
+            <li>Contato via WhatsApp para clientes cadastrados</li>
+            <li>Sem galeria de trabalhos</li>
+          </ul>
+          <button class="outline" data-pay-plan="gratis">Começar grátis</button>
+        </article>
+
+        <article class="plan-card featured-plan">
+          <div class="plan-badge">Mais escolhido</div>
+          <div class="plan-card-head">
+            <strong>Plano Destaque</strong>
+            <span>R$ 19,90/mês</span>
+          </div>
+          <p>Mais visibilidade para receber contatos</p>
+          <div class="plan-photo-limit">📷 1 foto principal + até 3 fotos de trabalhos</div>
+          <ul>
+            <li>Tudo do plano grátis</li>
+            <li>Aparece em Destaques da sua região</li>
+            <li>Prioridade acima do plano grátis</li>
+            <li>Ideal para quem quer mais visibilidade</li>
+          </ul>
+          <button class="secondary" data-pay-plan="destaque">Escolher destaque</button>
+        </article>
+
+        <article class="plan-card premium">
+          <div class="plan-badge">Mais completo</div>
+          <div class="plan-card-head">
+            <strong>Plano Premium</strong>
+            <span>R$ 39,90/mês</span>
+          </div>
+          <p>Prioridade máxima no app</p>
+          <div class="plan-photo-limit">📷 1 foto principal + até 10 fotos de trabalhos</div>
+          <ul>
+            <li>Tudo do plano destaque</li>
+            <li>Prioridade máxima na ordenação</li>
+            <li>Mais força nas buscas</li>
+            <li>Galeria completa para mostrar portfólio</li>
+          </ul>
+          <button class="success" data-pay-plan="premium">Escolher premium</button>
+        </article>
+      </div>
+    </section>
+
+    <section id="pagamento" class="screen">
+      <button class="back" data-go="planos">← Voltar aos planos</button>
+      <h3>Pagamento do plano</h3>
+      <div id="paymentBox" class="payment-box"></div>
     </section>
 
     <section id="admin" class="screen">

@@ -502,67 +502,21 @@ button, .tabs button, input, select, textarea{
 .plan-card.free-plan .plan-badge{background:#eef2f7; color:#334155;}
 @media(max-width:780px){.plan-grid{display:flex; flex-direction:column; gap:14px}.plan-card{width:100%;}.plan-card-head strong{font-size:1.12rem}.plan-card-head span{font-size:1rem}}
 
-/* Planos na tela inicial - versão limpa baseada na V9.9 */
-.home-plans-section{
-  margin:22px 0 26px;
-}
-.home-plans-section > p{
-  margin-top:-6px;
-  margin-bottom:14px;
-}
-.home-plans-grid{
+/* Página exclusiva de planos */
+.plans-only-grid{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:14px;
+  gap:16px;
+  margin:16px 0 24px;
 }
-.home-plan-card{
-  background:#fff;
-  border:1px solid #dbe7f3;
-  border-radius:20px;
-  padding:16px;
-  box-shadow:0 14px 32px rgba(15,76,129,.08);
+.plans-only-grid .plan-card{
   display:flex;
   flex-direction:column;
   gap:10px;
 }
-.home-plan-card.plan-highlight{
-  border:2px solid #ffb703;
-  background:linear-gradient(180deg,#fffdf3,#fff);
-}
-.home-plan-card.plan-premium{
-  border:2px solid #16a34a;
-  background:linear-gradient(180deg,#f3fff7,#fff);
-}
-.plan-title-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:10px;
-}
-.plan-title-row h4{
-  margin:0;
-  color:#0b1b33;
-  font-size:1.08rem;
-}
-.plan-title-row strong{
-  color:#0f4c81;
-  font-weight:900;
-  white-space:nowrap;
-}
-.home-plan-card p{
-  margin:0;
-  color:#24364b;
-  font-weight:700;
-}
-.home-plan-card ul{
-  margin:0;
-  padding-left:18px;
-  line-height:1.45;
-  color:#24364b;
-}
-.home-plan-card button{
-  width:100%;
+.plans-only-grid .plan-card button{
   margin-top:auto;
+  width:100%;
 }
 .payment-box{
   max-width:680px;
@@ -585,10 +539,6 @@ button, .tabs button, input, select, textarea{
   color:#0f4c81;
   margin-bottom:10px;
 }
-.payment-card ul{
-  padding-left:20px;
-  line-height:1.5;
-}
 .payment-button{
   display:flex;
   align-items:center;
@@ -602,7 +552,7 @@ button, .tabs button, input, select, textarea{
   font-weight:900;
 }
 @media(max-width:900px){
-  .home-plans-grid{
+  .plans-only-grid{
     grid-template-columns:1fr;
   }
 }

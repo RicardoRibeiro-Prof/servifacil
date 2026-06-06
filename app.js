@@ -1,9 +1,9 @@
 const ADMIN_EMAIL = 'admin@servifacil.com';
 const ADMIN_TEST_PASSWORD = '123456';
 
-// Links de pagamento dos planos.
-// Para usar Mercado Pago, Asaas, PagSeguro ou Pix Copia e Cola via página externa,
-// cole o link real abaixo. Enquanto estiver vazio, o app abre uma tela com WhatsApp.
+// Links reais de pagamento dos planos.
+// Cole aqui links de checkout do Mercado Pago, Asaas, PagSeguro, Pix etc.
+// Enquanto estiver vazio, o app mostra solicitação por WhatsApp.
 const PAYMENT_LINKS = {
   gratis: '',
   destaque: '',
@@ -577,37 +577,8 @@ async function requestProviderPlan(plan){
 }
 
 async function renderPlansPage(){
-  const el=$('plansPageCards');
-  if(!el) return;
-  const providers = currentUser ? await getProviders() : [];
-  const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
-  const currentPlan = mine[0]?.plan || 'gratis';
-  const requestedPlan = mine[0]?.planRequest || '';
-  el.innerHTML = planOrder.map(key => { const plan = planConfig[key];
-    const isCurrent = isProviderUser() && key === currentPlan;
-    const isRequested = isProviderUser() && key === requestedPlan && key !== currentPlan;
-    const providerAction = isProviderUser()
-      ? `<button class="${key==='premium'?'success':key==='destaque'?'secondary':'outline'}" data-request-plan="${key}" ${isCurrent?'disabled':''}>${isCurrent?'Plano atual':isRequested?'Solicitado':'Quero este plano'}</button>`
-      : '';
-    return `<article class="plan-card ${planClass(key)}">
-      <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
-      <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
-      <p>${safeText(plan.short)}</p>
-      <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
-      <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
-      ${providerAction}
-    </article>`;
-  }).join('');
-  const info=$('plansInfoBox');
-  if(info){
-    if(isProviderUser()){
-      info.innerHTML = `<p><strong>Como funciona:</strong> escolha o plano desejado e sua solicitação ficará registrada para o administrador aprovar e combinar o pagamento.</p><p><strong>Plano atual:</strong> ${planFullName(currentPlan)} ${requestedPlan && requestedPlan !== currentPlan ? `• Solicitação pendente: ${planFullName(requestedPlan)}` : ''}</p>`;
-    } else if(isAdmin()){
-      info.innerHTML = `<p><strong>Administração:</strong> os prestadores visualizam esta tela e podem solicitar um plano. A aprovação continua sendo feita no painel administrativo.</p><button data-go="admin">Gerenciar prestadores</button>`;
-    } else {
-      info.innerHTML = `<p>Os planos são exclusivos para prestadores de serviço.</p><button data-go="login">Entrar ou criar conta</button>`;
-    }
-  }
+  // A página de planos é estática no HTML para garantir que os 3 planos sempre apareçam.
+  return;
 }
 
 
@@ -634,18 +605,18 @@ async function updateImagePreview(){
 function clearFilters(){ $('searchText').value=''; $('cityFilter').value=''; $('categoryFilter').value=''; $('planFilter').value=''; $('sortFilter').value='featured'; renderProfessionals(); }
 
 
-function selectHomePlan(plan){
+function openPaymentPlan(plan){
   if(plan === 'gratis'){
     showScreen('cadastro');
-    const planSelect = $('providerPlan');
-    if(planSelect){ planSelect.value = 'gratis'; updateImagePreview(); }
+    const sel = $('providerPlan');
+    if(sel){ sel.value = 'gratis'; updateImagePreview(); }
     showToast('Preencha seu cadastro para começar no Plano Grátis.');
     return;
   }
 
-  const directLink = PAYMENT_LINKS[plan];
-  if(directLink && directLink.trim()){
-    window.open(directLink.trim(), '_blank', 'noopener');
+  const link = PAYMENT_LINKS[plan];
+  if(link && link.trim()){
+    window.open(link.trim(), '_blank', 'noopener');
     return;
   }
 
@@ -654,8 +625,8 @@ function selectHomePlan(plan){
 
 function showPaymentPlan(plan){
   const cfg = planConfig[plan] || planConfig.destaque;
-  const text = encodeURIComponent(`Olá! Quero assinar o ${cfg.name} do ServiFácil (${cfg.price}).`);
-  const waLink = `https://wa.me/${PAYMENT_WHATSAPP}?text=${text}`;
+  const msg = encodeURIComponent(`Olá! Quero assinar o ${cfg.name} do ServiFácil (${cfg.price}).`);
+  const wa = `https://wa.me/${PAYMENT_WHATSAPP}?text=${msg}`;
 
   const box = $('paymentBox');
   if(!box) return;
@@ -667,14 +638,14 @@ function showPaymentPlan(plan){
       <strong class="payment-price">${safeText(cfg.price)}</strong>
       <p>${safeText(cfg.short)}</p>
       <div class="plan-photo-limit">📷 ${safeText(planPhotoText(plan))}</div>
-      <ul>${cfg.features.map(item => `<li>${safeText(item)}</li>`).join('')}</ul>
+      <ul>${cfg.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
       <div class="notice small">
-        O pagamento automático ainda não foi integrado. Use o botão abaixo para solicitar o pagamento ao administrador. Depois da confirmação, o administrador ativa o plano.
+        O pagamento automático ainda não foi integrado. Use o botão abaixo para solicitar o pagamento ao administrador.
+        Depois da confirmação, o administrador ativa o plano no painel.
       </div>
-      <a class="payment-button" href="${waLink}" target="_blank" rel="noopener">Solicitar pagamento pelo WhatsApp</a>
+      <a class="payment-button" href="${wa}" target="_blank" rel="noopener">Solicitar pagamento pelo WhatsApp</a>
     </article>
   `;
-
   showScreen('pagamento');
 }
 
@@ -682,7 +653,7 @@ function bindEvents(){
   document.body.addEventListener('click', async e=>{
     const go=e.target.closest('[data-go]')?.dataset.go; if(go){ showScreen(go); return; }
     const screen=e.target.closest('.tabs button')?.dataset.screen; if(screen){ showScreen(screen); return; }
-    const homePlan=e.target.closest('[data-home-plan]')?.dataset.homePlan; if(homePlan){ selectHomePlan(homePlan); return; }
+    const payPlan=e.target.closest('[data-pay-plan]')?.dataset.payPlan; if(payPlan){ openPaymentPlan(payPlan); return; }
     const cat=e.target.closest('[data-cat]')?.dataset.cat; if(cat){ $('categoryFilter').value=cat; showScreen('buscar'); return; }
     const prof=e.target.closest('[data-profile]')?.dataset.profile; if(prof){ await openProfile(prof); return; }
     const edit=e.target.closest('[data-edit]')?.dataset.edit; if(edit){ await editProvider(edit); return; }
