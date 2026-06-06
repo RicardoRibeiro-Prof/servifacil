@@ -124,6 +124,3 @@ V8:
 - Menu mostra Admin apenas para administradores.
 - Menu Minha conta/Dashboard ajustado por perfil.
 - Textos do fluxo de cadastro profissionalizados.
-
-
-V8.3: Corrige salvamento do cadastro de prestador, torna upload de fotos mais tolerante a erro e salva o perfil mesmo se a foto falhar.
