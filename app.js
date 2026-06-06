@@ -18,15 +18,17 @@ const planConfig = {
     short: 'Perfil básico para começar',
     adminNote: 'Aparece na busca, sem prioridade nos destaques.',
     photoLimit: 0,
+    badge: 'Entrada',
     features: ['Perfil público aprovado', 'Contato via WhatsApp para clientes cadastrados', '1 foto principal', 'Sem galeria de trabalhos']
   },
   destaque: {
     name: 'Plano Destaque',
     price: 'R$ 19,90/mês',
-    short: 'Mais visibilidade na região',
-    adminNote: 'Aparece nos destaques e acima do plano grátis.',
+    short: 'Mais visibilidade para receber contatos',
+    adminNote: 'Plano intermediário: aparece nos destaques, fica acima do grátis e libera galeria com até 3 fotos.',
     photoLimit: 3,
-    features: ['Tudo do plano grátis', 'Aparece em Destaques da sua região', 'Prioridade na listagem', '1 foto principal + até 3 fotos de trabalhos']
+    badge: 'Mais escolhido',
+    features: ['Tudo do plano grátis', 'Aparece em Destaques da sua região', 'Prioridade acima do plano grátis', '1 foto principal + até 3 fotos de trabalhos', 'Ideal para quem quer mais visibilidade sem ir para o premium']
   },
   premium: {
     name: 'Plano Premium',
@@ -34,9 +36,12 @@ const planConfig = {
     short: 'Prioridade máxima no app',
     adminNote: 'Melhor posição, galeria completa e maior prioridade nas buscas.',
     photoLimit: 10,
+    badge: 'Mais completo',
     features: ['Tudo do plano destaque', 'Prioridade máxima na ordenação', 'Mais força nas buscas', '1 foto principal + até 10 fotos de trabalhos', 'Galeria completa para mostrar portfólio']
   }
 };
+
+const planOrder = ['gratis', 'destaque', 'premium'];
 
 const sampleProviders = [
   { id:'sample-provider-1', userId:null, name:'João Silva', category:'construcao', city:'São Raimundo Nonato - PI', neighborhood:'Centro', whatsapp:'5589999999999', price:'A partir de R$ 50,00', description:'Eletricista residencial. Faço instalação de tomadas, troca de chuveiro, manutenção em disjuntores e instalação de iluminação.', rating:4.8, ratingCount:12, views:0, plan:'destaque', featured:true, status:'aprovado', active:true, workImages:[], createdAt:new Date().toISOString() },
@@ -532,13 +537,14 @@ async function renderDashboard(){
 function renderPlanCards(){
   const el=$('planConfigCards');
   if(!el) return;
-  el.innerHTML = Object.entries(planConfig).map(([key,plan])=>`<article class="plan-card ${planClass(key)}">
+  el.innerHTML = planOrder.map(key => { const plan = planConfig[key]; return `<article class="plan-card ${planClass(key)}">
+    <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
     <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
     <p>${safeText(plan.short)}</p>
     <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
     <small>${safeText(plan.adminNote)}</small>
     <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
-  </article>`).join('');
+  </article>`; }).join('');
 }
 
 async function requestProviderPlan(plan){
@@ -567,13 +573,14 @@ async function renderPlansPage(){
   const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
   const currentPlan = mine[0]?.plan || 'gratis';
   const requestedPlan = mine[0]?.planRequest || '';
-  el.innerHTML = Object.entries(planConfig).map(([key,plan])=>{
+  el.innerHTML = planOrder.map(key => { const plan = planConfig[key];
     const isCurrent = isProviderUser() && key === currentPlan;
     const isRequested = isProviderUser() && key === requestedPlan && key !== currentPlan;
     const providerAction = isProviderUser()
       ? `<button class="${key==='premium'?'success':key==='destaque'?'secondary':'outline'}" data-request-plan="${key}" ${isCurrent?'disabled':''}>${isCurrent?'Plano atual':isRequested?'Solicitado':'Quero este plano'}</button>`
       : '';
     return `<article class="plan-card ${planClass(key)}">
+      <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
       <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
       <p>${safeText(plan.short)}</p>
       <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
