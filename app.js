@@ -35,6 +35,7 @@ function planWeight(p){ const plan = p.plan || (p.featured ? 'destaque':'gratis'
 function statusLabel(s){ return s === 'aprovado' ? 'Aprovado' : s === 'bloqueado' ? 'Bloqueado' : 'Pendente'; }
 function statusClass(s){ return s === 'aprovado' ? 'approved' : s === 'bloqueado' ? 'blocked' : 'pending'; }
 function isAdmin(user = currentUser){ return Boolean(user && (user.role === 'admin' || user.type === 'admin' || String(user.email).toLowerCase() === ADMIN_EMAIL)); }
+function isProviderUser(user = currentUser){ return Boolean(user && !isAdmin(user) && (user.role === 'prestador' || user.type === 'prestador')); }
 function showToast(message){ const t=$('toast'); t.textContent=message; t.classList.remove('hidden'); clearTimeout(showToast.timer); showToast.timer=setTimeout(()=>t.classList.add('hidden'),3500); }
 function localGet(key, fallback){ try{ const raw=localStorage.getItem(key); if(!raw){ localStorage.setItem(key,JSON.stringify(fallback)); return fallback; } return JSON.parse(raw); }catch{return fallback;} }
 function localSet(key, value){ localStorage.setItem(key, JSON.stringify(value)); }
@@ -76,6 +77,8 @@ async function handleAuthState(userCredential){
   }
   updateSessionUI();
   await refreshAll();
+  const active=document.querySelector('.active-screen')?.id;
+  if(isProviderUser() && (active==='inicio' || active==='buscar' || active==='solicitacoes')) showScreen('painel');
 }
 function canManageProvider(user = currentUser){ return Boolean(user && (isAdmin(user) || user.role === 'prestador' || user.type === 'prestador')); }
 
@@ -84,7 +87,11 @@ function updateSessionUI(){
   const adminButton=$('adminTabButton');
   const heroLogin=$('heroLoginButton');
   const heroOffer=document.querySelector('[data-go="cadastro"]');
+  const tabInicio=document.querySelector('.tabs button[data-screen="inicio"]');
+  const tabBuscar=document.querySelector('.tabs button[data-screen="buscar"]');
+  const tabPedidos=document.querySelector('.tabs button[data-screen="solicitacoes"]');
   const adminAccess = isAdmin();
+  const providerAccess = isProviderUser();
 
   if(currentUser){
     badge.textContent = adminAccess ? 'Administrador' : `Olá, ${currentUser.name || currentUser.email}`;
@@ -98,16 +105,22 @@ function updateSessionUI(){
   }
 
   const accountTab=$('accountTabButton');
-  if(accountTab) accountTab.textContent = adminAccess ? 'Dashboard' : 'Minha conta';
+  if(accountTab) accountTab.textContent = adminAccess ? 'Dashboard' : providerAccess ? 'Meu painel' : 'Minha conta';
 
   if(heroOffer){
     heroOffer.classList.toggle('hidden', adminAccess);
-    heroOffer.textContent = canManageProvider() && !adminAccess ? 'Meus serviços' : 'Oferecer meus serviços';
+    heroOffer.textContent = providerAccess ? 'Meu perfil profissional' : 'Oferecer meus serviços';
   }
+  const heroSearch=document.querySelector('[data-go="buscar"]');
+  if(heroSearch) heroSearch.classList.toggle('hidden', providerAccess);
 
+  if(tabInicio) tabInicio.classList.toggle('hidden', providerAccess);
+  if(tabBuscar) tabBuscar.classList.toggle('hidden', providerAccess);
+  if(tabPedidos) tabPedidos.classList.toggle('hidden', providerAccess);
   if(adminButton) adminButton.classList.toggle('hidden', !adminAccess);
   if(mode) mode.classList.add('hidden');
 }
+
 
 async function getCollection(name, fallback=[]){
   if(!firebaseOnline) return localGet(name, fallback);
@@ -168,6 +181,9 @@ function renderCategories(){
 function showScreen(id){
   if(id==='admin' && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
   if(id==='cadastro' && !currentUser){ showToast('Entre ou crie uma conta para oferecer seus serviços.'); id = 'login'; }
+  if(isProviderUser() && (id==='inicio' || id==='buscar' || id==='solicitacoes')){
+    id = 'painel';
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active-screen'));
   $(id).classList.add('active-screen');
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
@@ -212,8 +228,20 @@ function providerCard(p, admin=false, owner=false){
 }
 function ownerButtons(p){ return `<button class="secondary" data-edit="${p.id}">Editar perfil</button><button class="outline" data-toggle-active="${p.id}">${p.active===false?'Ativar perfil':'Pausar perfil'}</button>`; }
 function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Plano grátis</button><button class="secondary" data-plan="${p.id}|destaque">Plano destaque</button><button class="success" data-plan="${p.id}|premium">Plano premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
-async function renderFeatured(){ const list=(await approvedProviders()).filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').sort((a,b)=>planWeight(b)-planWeight(a)||Number(b.rating||0)-Number(a.rating||0)); $('featuredList').innerHTML=list.length?list.map(p=>providerCard(p)).join(''):'<p class="empty-card muted">Nenhum profissional em destaque ainda.</p>'; }
+async function renderFeatured(){
+  if(isProviderUser()){
+    const mine=(await getProviders()).filter(p=>p.userId===currentUser.id);
+    $('featuredList').innerHTML=mine.length?mine.map(p=>providerCard(p,false,true)).join(''):'<p class="empty-card muted">Você ainda não cadastrou seu perfil profissional.</p>';
+    return;
+  }
+  const list=(await approvedProviders()).filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').sort((a,b)=>planWeight(b)-planWeight(a)||Number(b.rating||0)-Number(a.rating||0));
+  $('featuredList').innerHTML=list.length?list.map(p=>providerCard(p)).join(''):'<p class="empty-card muted">Nenhum profissional em destaque ainda.</p>';
+}
 async function renderProfessionals(){
+  if(isProviderUser()){
+    $('professionalList').innerHTML='<p class="empty-card muted">Seu acesso é de prestador. Use o Meu painel para gerenciar seu perfil e pedidos recebidos.</p>';
+    return;
+  }
   const text=$('searchText').value.toLowerCase().trim(), city=$('cityFilter').value.toLowerCase().trim(), cat=$('categoryFilter').value, plan=$('planFilter').value, sort=$('sortFilter').value;
   let list=(await approvedProviders()).filter(p=>{ const h=[p.name,p.description,categoryName(p.category)].join(' ').toLowerCase(); const loc=[p.city,p.neighborhood].join(' ').toLowerCase(); const pp=p.plan||(p.featured?'destaque':'gratis'); return (!text||h.includes(text))&&(!city||loc.includes(city))&&(!cat||p.category===cat)&&(!plan||pp===plan); });
   list.sort((a,b)=>{ if(sort==='rating') return Number(b.rating||0)-Number(a.rating||0); if(sort==='views') return Number(b.views||0)-Number(a.views||0); if(sort==='newest') return new Date(b.createdAt||0)-new Date(a.createdAt||0); return planWeight(b)-planWeight(a)||Number(b.featured)-Number(a.featured)||Number(b.rating||0)-Number(a.rating||0); });
@@ -221,7 +249,10 @@ async function renderProfessionals(){
 }
 async function openProfile(id){
   const all=await getProviders(); const found=all.find(p=>p.id===id); if(!found) return;
-  const p={...found, views:Number(found.views||0)+1}; await upsertDoc('providers',p);
+  if(isProviderUser() && found.userId !== currentUser.id){ showToast('Como prestador, você acessa apenas seu próprio perfil.'); showScreen('painel'); return; }
+  const isOwnerView = currentUser && found.userId === currentUser.id;
+  const p=isOwnerView ? {...found} : {...found, views:Number(found.views||0)+1};
+  if(!isOwnerView) await upsertDoc('providers',p);
   const reviews=(await getReviews()).filter(r=>r.providerId===p.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const phone=String(p.whatsapp||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(p.category)}.`);
   const profileBadges = `<span class="badge">${categoryName(p.category)}</span>${(p.featured || p.plan==='destaque' || p.plan==='premium') ? ' <span class="badge featured-plan">Destaque</span>' : ''}`;
@@ -246,8 +277,8 @@ async function login(email,password){
   const u=users.find(x=>x.email.toLowerCase()===email.toLowerCase() && x.password===password); if(!u) throw new Error('E-mail ou senha inválidos.'); currentUser=u; updateSessionUI(); showToast('Login local realizado.'); showScreen('painel');
 }
 async function createAccount(name,email,password,type){
-  if(authOnline){ const cred=await auth.createUserWithEmailAndPassword(email,password); await cred.user.updateProfile({displayName:name}); const user={id:cred.user.uid,name,email,role:type,type,createdAt:now()}; await db.collection('users').doc(cred.user.uid).set(user,{merge:true}); currentUser=user; updateSessionUI(); showToast('Conta criada com login seguro.'); showScreen(type==='prestador'?'cadastro':'painel'); return; }
-  const users=localGet('users',[]); if(users.some(u=>u.email.toLowerCase()===email.toLowerCase())) throw new Error('E-mail já cadastrado.'); const user={id:newId(),name,email,password,role:type,type,createdAt:now()}; users.push(user); localSet('users',users); currentUser=user; updateSessionUI(); showToast('Conta local criada.'); showScreen(type==='prestador'?'cadastro':'painel');
+  if(authOnline){ const cred=await auth.createUserWithEmailAndPassword(email,password); await cred.user.updateProfile({displayName:name}); const user={id:cred.user.uid,name,email,role:type,type,createdAt:now()}; await db.collection('users').doc(cred.user.uid).set(user,{merge:true}); currentUser=user; updateSessionUI(); showToast('Conta criada com login seguro.'); showScreen(type==='prestador'?'painel':'painel'); return; }
+  const users=localGet('users',[]); if(users.some(u=>u.email.toLowerCase()===email.toLowerCase())) throw new Error('E-mail já cadastrado.'); const user={id:newId(),name,email,password,role:type,type,createdAt:now()}; users.push(user); localSet('users',users); currentUser=user; updateSessionUI(); showToast('Conta local criada.'); showScreen(type==='prestador'?'painel':'painel');
 }
 async function logout(){ if(authOnline) await auth.signOut(); currentUser=null; updateSessionUI(); showToast('Você saiu da conta.'); showScreen('inicio'); }
 

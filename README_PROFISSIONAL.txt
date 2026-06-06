@@ -127,3 +127,9 @@ V8:
 
 
 V8.1.4: Correção para fotos: se o Firebase Storage falhar, o app salva uma versão comprimida da imagem no próprio perfil, evitando cadastro sem foto.
+
+V8.1.8 - Painel do prestador
+- Prestador logado não vê a listagem pública de outros prestadores.
+- Menu do prestador fica focado em Meu painel.
+- Buscar/Início/Pedidos públicos são ocultados para prestador.
+- Prestador acessa apenas o próprio perfil e pedidos recebidos.
