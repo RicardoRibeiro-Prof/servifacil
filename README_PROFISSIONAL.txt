@@ -124,3 +124,6 @@ V8:
 - Menu mostra Admin apenas para administradores.
 - Menu Minha conta/Dashboard ajustado por perfil.
 - Textos do fluxo de cadastro profissionalizados.
+
+
+V8.1.3: Correção para fotos: se o Firebase Storage falhar, o app salva uma versão comprimida da imagem no próprio perfil, evitando cadastro sem foto.

@@ -128,13 +128,26 @@ async function getRequests(){ return getCollection('requests', []); }
 async function getReviews(){ return getCollection('reviews', []); }
 async function approvedProviders(){ return (await getProviders()).filter(p=>p.status==='aprovado' && p.active!==false); }
 
-async function resizeImageToBlob(file, maxWidth=1000, quality=.76){
+async function resizeImageToBlob(file, maxWidth=900, quality=.72){
   return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=()=>reject(new Error('Erro ao ler imagem.')); reader.onload=()=>{ const img=new Image(); img.onerror=()=>reject(new Error('Imagem inválida.')); img.onload=()=>{ const scale=Math.min(1,maxWidth/img.width); const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.round(img.width*scale)); canvas.height=Math.max(1,Math.round(img.height*scale)); const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height); canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Erro ao comprimir imagem.')), 'image/jpeg', quality); }; img.src=reader.result; }; reader.readAsDataURL(file); });
 }
-async function fileToDataUrl(file){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=reject; reader.onload=()=>resolve(reader.result); reader.readAsDataURL(file); }); }
+async function blobToDataUrl(blob){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=()=>reject(new Error('Erro ao converter imagem.')); reader.onload=()=>resolve(reader.result); reader.readAsDataURL(blob); }); }
 async function uploadImage(file, path){
-  if(storageOnline && currentUser){ const blob = await resizeImageToBlob(file); const ref = storage.ref().child(path); await ref.put(blob, { contentType:'image/jpeg' }); return ref.getDownloadURL(); }
-  return fileToDataUrl(file);
+  const blob = await resizeImageToBlob(file, 800, .68);
+
+  // Primeiro tenta enviar para o Firebase Storage. Se o Storage não estiver liberado
+  // ou der qualquer erro, usa uma imagem comprimida salva no Firestore como fallback.
+  if(storageOnline && currentUser){
+    try{
+      const ref = storage.ref().child(path);
+      await ref.put(blob, { contentType:'image/jpeg' });
+      return await ref.getDownloadURL();
+    }catch(storageErr){
+      console.warn('Firebase Storage falhou. Usando imagem comprimida no Firestore.', storageErr);
+      showToast('Foto salva no perfil. Depois podemos ajustar o Storage para ficar mais profissional.');
+    }
+  }
+  return await blobToDataUrl(blob);
 }
 async function processProviderImages(providerId, existing={}){
   let profileImage = existing.profileImage || '';
