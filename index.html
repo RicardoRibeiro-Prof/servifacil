@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ServiFácil - Marketplace de Serviços</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="theme-color" content="#0f4c81" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>ServiFácil</h1>
+      <p>Marketplace de serviços locais</p>
+    </div>
+    <div class="top-actions">
+      <span id="userBadge" class="user-badge hidden"></span>
+      <button id="btnInstall" class="install-btn hidden">Instalar</button>
+      <span id="dataModeBadge" class="user-badge">Local</span>
+      <button id="btnLogout" class="ghost hidden" onclick="logout()">Sair</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h2>Encontre profissionais perto de você</h2>
+      <p>Busque por categoria, veja perfis, solicite orçamento e chame direto no WhatsApp.</p>
+      <div class="hero-actions">
+        <button onclick="showScreen('buscar')">Buscar serviço</button>
+        <button class="secondary" onclick="showScreen('cadastro')">Oferecer meus serviços</button>
+        <button class="outline" onclick="showScreen('login')">Entrar / Criar conta</button>
+      </div>
+    </section>
+
+    <nav class="tabs">
+      <button class="active" data-screen="inicio" onclick="showScreen('inicio')">Início</button>
+      <button data-screen="buscar" onclick="showScreen('buscar')">Buscar</button>
+      <button data-screen="cadastro" onclick="showScreen('cadastro')">Cadastrar</button>
+      <button data-screen="solicitacoes" onclick="showScreen('solicitacoes')">Pedidos</button>
+      <button data-screen="painel" onclick="showScreen('painel')">Meu painel</button>
+      <button data-screen="admin" onclick="showScreen('admin')">Admin</button>
+    </nav>
+
+    <section id="inicio" class="screen active-screen">
+      <div class="notice">
+        <strong>Versão 3 implementada:</strong> agora o app está pronto para Firebase/Firestore, com modo online quando configurado e fallback local automático.
+      </div>
+      <h3>Categorias populares</h3>
+      <div id="categoryGrid" class="category-grid"></div>
+
+      <h3>Profissionais em destaque</h3>
+      <div id="featuredList" class="cards"></div>
+    </section>
+
+    <section id="login" class="screen">
+      <h3>Entrar ou criar conta</h3>
+      <div class="split-grid">
+        <form id="loginForm" class="form-card">
+          <h4>Entrar</h4>
+          <label>E-mail
+            <input required id="loginEmail" type="email" placeholder="seuemail@email.com" />
+          </label>
+          <label>Senha
+            <input required id="loginPassword" type="password" placeholder="Digite sua senha" />
+          </label>
+          <button type="submit">Entrar</button>
+          <p class="muted small">Admin de teste: admin@servifacil.com / 123456</p>
+        </form>
+
+        <form id="accountForm" class="form-card">
+          <h4>Criar conta</h4>
+          <label>Nome
+            <input required id="accountName" placeholder="Seu nome" />
+          </label>
+          <label>E-mail
+            <input required id="accountEmail" type="email" placeholder="seuemail@email.com" />
+          </label>
+          <label>Senha
+            <input required id="accountPassword" type="password" minlength="4" placeholder="Mínimo 4 caracteres" />
+          </label>
+          <label>Tipo de conta
+            <select required id="accountType">
+              <option value="cliente">Cliente</option>
+              <option value="prestador">Prestador de serviço</option>
+            </select>
+          </label>
+          <button type="submit" class="secondary">Criar conta</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="buscar" class="screen">
+      <h3>Buscar profissionais</h3>
+      <div class="filters">
+        <input id="searchText" type="search" placeholder="Digite serviço, nome, cidade ou bairro" oninput="renderProfessionals()" />
+        <select id="categoryFilter" onchange="renderProfessionals()"></select>
+        <select id="sortFilter" onchange="renderProfessionals()">
+          <option value="featured">Destaques primeiro</option>
+          <option value="rating">Melhor avaliação</option>
+          <option value="newest">Mais recentes</option>
+        </select>
+      </div>
+      <div id="professionalList" class="cards"></div>
+    </section>
+
+    <section id="cadastro" class="screen">
+      <h3>Cadastrar prestador de serviço</h3>
+      <div class="notice">Cadastros novos ficam como <strong>pendentes</strong>. O administrador pode aprovar no painel Admin.</div>
+      <form id="providerForm" class="form-card">
+        <label>Nome do profissional ou empresa
+          <input required id="name" placeholder="Ex: João Silva" />
+        </label>
+
+        <label>Categoria
+          <select required id="category"></select>
+        </label>
+
+        <label>Cidade
+          <input required id="city" placeholder="Ex: São Raimundo Nonato - PI" />
+        </label>
+
+        <label>Bairro
+          <input id="neighborhood" placeholder="Ex: Centro" />
+        </label>
+
+        <label>WhatsApp
+          <input required id="whatsapp" placeholder="Ex: 5589999999999" />
+        </label>
+
+        <label>Preço inicial
+          <input id="price" placeholder="Ex: A partir de R$ 50,00" />
+        </label>
+
+        <label>Descrição dos serviços
+          <textarea required id="description" rows="5" placeholder="Explique o que você faz, sua experiência e os tipos de serviço que atende."></textarea>
+        </label>
+
+        <label>Link de foto, Instagram ou portfólio
+          <input id="photo" placeholder="Cole uma URL de imagem, Instagram ou portfólio" />
+        </label>
+
+        <button type="submit">Cadastrar serviço</button>
+      </form>
+    </section>
+
+    <section id="perfil" class="screen">
+      <button class="back" onclick="showScreen('buscar')">← Voltar</button>
+      <div id="profileBox"></div>
+    </section>
+
+    <section id="solicitacoes" class="screen">
+      <h3>Solicitar orçamento</h3>
+      <form id="requestForm" class="form-card">
+        <label>Categoria do serviço
+          <select required id="requestCategory"></select>
+        </label>
+        <label>Profissional específico opcional
+          <select id="requestProvider"></select>
+        </label>
+        <label>Nome do cliente
+          <input required id="requestClientName" placeholder="Seu nome" />
+        </label>
+        <label>WhatsApp do cliente
+          <input required id="requestPhone" placeholder="Ex: 5589999999999" />
+        </label>
+        <label>Cidade/Bairro
+          <input required id="requestLocation" placeholder="Ex: Centro, São Raimundo Nonato - PI" />
+        </label>
+        <label>Descreva o que precisa
+          <textarea required id="requestDescription" rows="5" placeholder="Ex: preciso trocar uma tomada, instalar chuveiro, criar uma arte..."></textarea>
+        </label>
+        <button type="submit">Enviar solicitação</button>
+      </form>
+
+      <h3>Últimas solicitações</h3>
+      <div id="requestList" class="cards"></div>
+    </section>
+
+    <section id="painel" class="screen">
+      <h3>Meu painel</h3>
+      <div id="dashboardBox"></div>
+    </section>
+
+    <section id="admin" class="screen">
+      <h3>Painel administrativo</h3>
+      <div class="stats">
+        <div><strong id="totalProviders">0</strong><span>Prestadores</span></div>
+        <div><strong id="pendingProviders">0</strong><span>Pendentes</span></div>
+        <div><strong id="totalRequests">0</strong><span>Solicitações</span></div>
+        <div><strong id="totalFeatured">0</strong><span>Destaques</span></div>
+      </div>
+
+      <div class="admin-actions">
+        <button onclick="exportData()">Exportar prestadores</button>
+        <button onclick="exportRequests()" class="secondary">Exportar solicitações</button>
+        <button class="danger" onclick="clearAllData()">Limpar dados</button>
+      </div>
+
+      <h4>Prestadores cadastrados</h4>
+      <div id="adminList" class="cards"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
