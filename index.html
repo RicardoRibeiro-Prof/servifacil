@@ -45,10 +45,73 @@
     </nav>
 
     <section id="inicio" class="screen active-screen">
-<h3>Categorias populares</h3>
+      <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
+
+      <section class="home-plans">
+        <div class="section-head">
+          <div>
+            <h3>Planos para prestadores</h3>
+            <p>Escolha um plano para divulgar seus serviços e receber contatos de clientes cadastrados.</p>
+          </div>
+        </div>
+
+        <div class="home-plan-grid">
+          <article class="home-plan-card free">
+            <span class="plan-badge">Entrada</span>
+            <div class="home-plan-title">
+              <strong>Plano Grátis</strong>
+              <span>R$ 0,00</span>
+            </div>
+            <p>Perfil básico para começar.</p>
+            <ul>
+              <li>1 foto principal</li>
+              <li>Aparece na busca</li>
+              <li>Contato via WhatsApp</li>
+            </ul>
+            <button class="outline" data-pay-plan="gratis">Escolher Grátis</button>
+          </article>
+
+          <article class="home-plan-card destaque">
+            <span class="plan-badge">Mais escolhido</span>
+            <div class="home-plan-title">
+              <strong>Plano Destaque</strong>
+              <span>R$ 19,90/mês</span>
+            </div>
+            <p>Mais visibilidade para receber contatos.</p>
+            <ul>
+              <li>1 foto principal + até 3 fotos</li>
+              <li>Aparece em destaques</li>
+              <li>Prioridade acima do grátis</li>
+            </ul>
+            <button class="secondary" data-pay-plan="destaque">Pagar Destaque</button>
+          </article>
+
+          <article class="home-plan-card premium">
+            <span class="plan-badge">Mais completo</span>
+            <div class="home-plan-title">
+              <strong>Plano Premium</strong>
+              <span>R$ 39,90/mês</span>
+            </div>
+            <p>Prioridade máxima no app.</p>
+            <ul>
+              <li>1 foto principal + até 10 fotos</li>
+              <li>Prioridade máxima</li>
+              <li>Galeria completa do serviço</li>
+            </ul>
+            <button class="success" data-pay-plan="premium">Pagar Premium</button>
+          </article>
+        </div>
+      </section>
+
       <h3>Destaques da sua região</h3>
       <div id="featuredList" class="cards"></div>
+    </section>
+
+    <section id="pagamento" class="screen">
+      <button class="back" data-go="inicio">← Voltar</button>
+      <h3>Pagamento do plano</h3>
+      <div id="paymentBox" class="payment-box"></div>
     </section>
 
     <section id="login" class="screen">
@@ -240,7 +303,7 @@
       <h3>Planos para prestadores</h3>
       <p class="muted">São 3 opções: Grátis, Destaque e Premium.</p>
       <div class="notice small">Compare os 3 planos disponíveis, veja o limite de fotos de cada um e escolha o melhor para divulgar seus serviços.</div>
-      <div id="plansPageCards" class="plans-three-grid"></div>
+      <div id="plansPageCards" class="plan-grid"></div>
       <h4>Informações do plano</h4>
       <div id="plansInfoBox" class="empty-card"></div>
     </section>
@@ -259,7 +322,7 @@
         <button id="exportReviews" class="outline">Exportar avaliações</button>
       </div>
       <h4>Planos disponíveis</h4>
-      <div id="planConfigCards" class="plans-three-grid"></div>
+      <div id="planConfigCards" class="plan-grid"></div>
       <div class="notice small">Por enquanto, a cobrança é manual. O administrador define o plano do prestador no painel. Depois podemos integrar pagamento automático.</div>
       <h4>Prestadores</h4>
       <div id="adminList" class="cards"></div>

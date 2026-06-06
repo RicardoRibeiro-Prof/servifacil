@@ -519,27 +519,57 @@ button, .tabs button, input, select, textarea{
 #plansPageCards.plans-page-list{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:14px !important;max-width:none !important;}
 @media(max-width:980px){#plansPageCards.plans-page-list{grid-template-columns:1fr !important;}}
 
-/* V10.2 - correção definitiva: os 3 planos sempre visíveis */
-.plans-three-grid{
+/* V11 - planos na tela inicial e pagamento */
+.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-top:22px;}
+.section-head h3{margin:0;}
+.section-head p{margin:4px 0 0;color:#61718a;line-height:1.35;}
+.home-plans{margin:18px 0 24px;}
+.home-plan-grid{
   display:grid !important;
-  grid-template-columns:repeat(3, minmax(220px, 1fr)) !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   gap:14px !important;
-  width:100% !important;
-  max-width:none !important;
-  margin:12px 0 16px !important;
+  width:100%;
 }
-.plans-three-grid .plan-card{
-  display:block !important;
-  min-height:100% !important;
-  width:auto !important;
+.home-plan-card{
+  background:#fff;
+  border:1px solid #dbe7f3;
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 12px 30px rgba(15,76,129,.08);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
-.plans-three-grid [data-plan-card="destaque"]{
-  display:block !important;
-  visibility:visible !important;
-  opacity:1 !important;
+.home-plan-card.destaque{border:2px solid #ffb703;background:linear-gradient(180deg,#fffdf5,#fff);}
+.home-plan-card.premium{border:2px solid #16a34a;background:linear-gradient(180deg,#f4fff8,#fff);}
+.home-plan-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.home-plan-title strong{font-size:1.05rem;color:#0b1b33;}
+.home-plan-title span{font-weight:900;color:#0f4c81;white-space:nowrap;}
+.home-plan-card p{margin:0;color:#24364b;font-weight:700;}
+.home-plan-card ul{margin:0;padding-left:18px;color:#24364b;line-height:1.45;}
+.home-plan-card button{margin-top:auto;width:100%;}
+.payment-box{max-width:620px;}
+.payment-card{
+  background:#fff;
+  border:1px solid #dbe7f3;
+  border-radius:22px;
+  padding:18px;
+  box-shadow:0 14px 34px rgba(15,76,129,.10);
 }
-@media(max-width:980px){
-  .plans-three-grid{
-    grid-template-columns:1fr !important;
-  }
+.payment-card h4{font-size:1.4rem;margin:10px 0 4px;color:#0b1b33;}
+.payment-price{display:block;font-size:1.2rem;color:#0f4c81;margin-bottom:8px;}
+.button-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none;
+  border-radius:14px;
+  padding:13px 16px;
+  font-weight:900;
+  margin-top:12px;
+}
+.button-link.primary{background:#0f4c81;color:#fff;}
+@media(max-width:900px){
+  .home-plan-grid{grid-template-columns:1fr !important;}
+  .section-head{align-items:flex-start;flex-direction:column;}
 }
