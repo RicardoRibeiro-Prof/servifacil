@@ -149,12 +149,22 @@
         </label>
         <label>Foto principal do perfil
           <input id="profileImage" type="file" accept="image/*" />
-          <small class="muted">Na versão profissional, a foto vai para o Firebase Storage quando ele estiver ativado.</small>
+          <small class="muted">Recomendado: foto quadrada 800 x 800 px, formato JPG ou PNG, com até 1 MB. Use uma foto clara, bem enquadrada e com fundo simples.</small>
         </label>
+        <div class="photo-guidelines">
+          <strong>Orientação para a foto principal</strong>
+          <span>Ideal para o card do profissional: rosto ou imagem do negócio em formato quadrado.</span>
+          <span>Evite foto muito distante, escura, cortada ou com muito espaço vazio.</span>
+        </div>
         <label>Fotos de trabalhos realizados
           <input id="workImages" type="file" accept="image/*" multiple />
-          <small class="muted">Selecione até 3 fotos.</small>
+          <small class="muted">Selecione até 3 fotos. Recomendado: 1200 x 800 px ou 1080 x 1080 px, JPG, até 1 MB cada.</small>
         </label>
+        <div class="photo-guidelines">
+          <strong>Orientação para fotos dos trabalhos</strong>
+          <span>Use imagens reais dos serviços já realizados, como antes/depois, obra, atendimento ou portfólio.</span>
+          <span>Fotos boas aumentam a confiança do cliente e ajudam o prestador a receber mais pedidos.</span>
+        </div>
         <div id="imagePreview" class="image-preview muted">Nenhuma nova foto selecionada.</div>
         <label>Link externo opcional: Instagram, portfólio ou site
           <input id="photo" placeholder="Cole uma URL, se tiver" />
