@@ -126,4 +126,4 @@ V8:
 - Textos do fluxo de cadastro profissionalizados.
 
 
-V8.1.3: Correção para fotos: se o Firebase Storage falhar, o app salva uma versão comprimida da imagem no próprio perfil, evitando cadastro sem foto.
+V8.1.4: Correção para fotos: se o Firebase Storage falhar, o app salva uma versão comprimida da imagem no próprio perfil, evitando cadastro sem foto.

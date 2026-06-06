@@ -123,7 +123,13 @@ async function deleteDoc(name,id){
   await db.collection(name).doc(id).delete();
 }
 async function getUsers(){ return getCollection('users', []); }
-async function getProviders(){ return (await getCollection('providers', sampleProviders)).map(p => ({status:'aprovado', active:true, workImages:[], plan:p.featured?'destaque':'gratis', views:0, ratingCount:0, ...p})); }
+function normalizeProvider(p){
+  const profileImage = p.profileImage || p.profilePhoto || p.photoUrl || p.imageUrl || p.image || p.avatar || '';
+  let workImages = Array.isArray(p.workImages) ? p.workImages : (Array.isArray(p.images) ? p.images : (Array.isArray(p.photos) ? p.photos : []));
+  workImages = workImages.filter(Boolean);
+  return {status:'aprovado', active:true, workImages:[], plan:p.featured?'destaque':'gratis', views:0, ratingCount:0, ...p, profileImage, workImages};
+}
+async function getProviders(){ return (await getCollection('providers', sampleProviders)).map(normalizeProvider); }
 async function getRequests(){ return getCollection('requests', []); }
 async function getReviews(){ return getCollection('reviews', []); }
 async function approvedProviders(){ return (await getProviders()).filter(p=>p.status==='aprovado' && p.active!==false); }
@@ -133,20 +139,10 @@ async function resizeImageToBlob(file, maxWidth=900, quality=.72){
 }
 async function blobToDataUrl(blob){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=()=>reject(new Error('Erro ao converter imagem.')); reader.onload=()=>resolve(reader.result); reader.readAsDataURL(blob); }); }
 async function uploadImage(file, path){
-  const blob = await resizeImageToBlob(file, 800, .68);
-
-  // Primeiro tenta enviar para o Firebase Storage. Se o Storage não estiver liberado
-  // ou der qualquer erro, usa uma imagem comprimida salva no Firestore como fallback.
-  if(storageOnline && currentUser){
-    try{
-      const ref = storage.ref().child(path);
-      await ref.put(blob, { contentType:'image/jpeg' });
-      return await ref.getDownloadURL();
-    }catch(storageErr){
-      console.warn('Firebase Storage falhou. Usando imagem comprimida no Firestore.', storageErr);
-      showToast('Foto salva no perfil. Depois podemos ajustar o Storage para ficar mais profissional.');
-    }
-  }
+  // Correção V8.1.4: para garantir que a foto apareça no GitHub Pages,
+  // salvamos uma versão bem comprimida como Data URL no perfil.
+  // Depois podemos voltar ao Firebase Storage quando estiver 100% configurado.
+  const blob = await resizeImageToBlob(file, 520, .55);
   return await blobToDataUrl(blob);
 }
 async function processProviderImages(providerId, existing={}){
@@ -337,6 +333,7 @@ async function saveProvider(event){
       description,
       photo:$('photo').value.trim(),
       ...imgs,
+      photoUrl:imgs.profileImage || old?.photoUrl || '',
       status:old?.status || (isAdmin()?'aprovado':'pendente'),
       active:old?.active ?? true,
       plan:old?.plan || 'gratis',
