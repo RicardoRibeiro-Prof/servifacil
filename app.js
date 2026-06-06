@@ -78,8 +78,22 @@ async function handleAuthState(userCredential){
 }
 function updateSessionUI(){
   const badge=$('userBadge'), logout=$('btnLogout'), mode=$('dataModeBadge');
-  if(currentUser){ badge.textContent = `Olá, ${currentUser.name || currentUser.email}`; badge.classList.remove('hidden'); logout.classList.remove('hidden'); }
-  else{ badge.classList.add('hidden'); logout.classList.add('hidden'); }
+  const adminButton=$('adminTabButton');
+  const heroLogin=$('heroLoginButton');
+  const adminAccess = isAdmin();
+
+  if(currentUser){
+    badge.textContent = adminAccess ? 'Administrador' : `Olá, ${currentUser.name || currentUser.email}`;
+    badge.classList.remove('hidden');
+    logout.classList.remove('hidden');
+    if(heroLogin) heroLogin.classList.add('hidden');
+  } else {
+    badge.classList.add('hidden');
+    logout.classList.add('hidden');
+    if(heroLogin) heroLogin.classList.remove('hidden');
+  }
+
+  if(adminButton) adminButton.classList.toggle('hidden', !adminAccess);
   if(mode) mode.classList.add('hidden');
 }
 

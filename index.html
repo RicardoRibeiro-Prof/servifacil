@@ -31,7 +31,7 @@
         <div class="hero-actions">
           <button data-go="buscar">Buscar serviço</button>
           <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
-          <button class="outline" data-go="login">Entrar / Criar conta</button>
+          <button id="heroLoginButton" class="outline" data-go="login">Entrar / Criar conta</button>
         </div>
       </div>
       <div class="hero-card clean-card">
@@ -47,11 +47,11 @@
       <button data-screen="cadastro">Cadastrar</button>
       <button data-screen="solicitacoes">Pedidos</button>
       <button data-screen="painel">Meu painel</button>
-      <button data-screen="admin">Admin</button>
+      <button id="adminTabButton" class="hidden" data-screen="admin">Admin</button>
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <div class="notice"><strong>Bem-vindo ao ServiFácil:</strong> encontre profissionais locais, veja perfis e solicite orçamento de forma simples.</div>
+      <div class="notice"><strong>ServiFácil:</strong> encontre profissionais locais, veja perfis e solicite orçamento de forma simples.</div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
       <h3>Profissionais em destaque</h3>
@@ -70,7 +70,7 @@
             <input required id="loginPassword" type="password" placeholder="Digite sua senha" autocomplete="current-password" />
           </label>
           <button type="submit">Entrar</button>
-          <p class="muted small">Admin de teste: admin@servifacil.com / 123456. Depois altere essa senha no Firebase Authentication.</p>
+          <p class="muted small">Use seu e-mail e senha para entrar. Se ainda não tiver conta, crie ao lado.</p>
         </form>
 
         <form id="accountForm" class="form-card" autocomplete="off">
