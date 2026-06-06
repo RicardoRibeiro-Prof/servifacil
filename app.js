@@ -69,8 +69,9 @@ async function handleAuthState(userCredential){
   if(!userCredential){ currentUser=null; updateSessionUI(); return; }
   const ref = db.collection('users').doc(userCredential.uid);
   const snap = await ref.get();
-  if(snap.exists){ currentUser = { ...snap.data(), id:userCredential.uid, email:userCredential.email || snap.data().email }; // mantém o UID real do Authentication como id }
-  else{
+  if(snap.exists){
+    currentUser = { ...snap.data(), id:userCredential.uid, email:userCredential.email || snap.data().email };
+  } else{
     currentUser = { id:userCredential.uid, name:userCredential.displayName || userCredential.email.split('@')[0], email:userCredential.email, role:String(userCredential.email).toLowerCase()===ADMIN_EMAIL ? 'admin':'cliente', type:String(userCredential.email).toLowerCase()===ADMIN_EMAIL ? 'admin':'cliente', createdAt:now() };
     await ref.set(currentUser, { merge:true });
   }
