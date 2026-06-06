@@ -70,6 +70,26 @@ function planSummary(plan){ return planConfig[plan]?.short || 'Perfil básico'; 
 function planPhotoLimit(plan){ return Number(planConfig[plan]?.photoLimit ?? 0); }
 function planPhotoText(plan){ const limit = planPhotoLimit(plan); return limit ? `1 foto principal + até ${limit} foto${limit>1?'s':''} de trabalhos` : '1 foto principal'; }
 function planWeight(p){ const plan = p.plan || (p.featured ? 'destaque':'gratis'); return plan === 'premium' ? 3 : plan === 'destaque' ? 2 : 1; }
+
+function getThreePlans(){
+  return [
+    ['gratis', planConfig.gratis],
+    ['destaque', planConfig.destaque],
+    ['premium', planConfig.premium]
+  ].filter(([key, plan]) => Boolean(plan));
+}
+
+function planCardHtml(key, plan, actionHtml = ''){
+  return `<article class="plan-card ${planClass(key)}" data-plan-card="${key}">
+    <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
+    <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
+    <p>${safeText(plan.short)}</p>
+    <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
+    <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
+    ${actionHtml}
+  </article>`;
+}
+
 function statusLabel(s){ return s === 'aprovado' ? 'Aprovado' : s === 'bloqueado' ? 'Bloqueado' : 'Pendente'; }
 function statusClass(s){ return s === 'aprovado' ? 'approved' : s === 'bloqueado' ? 'blocked' : 'pending'; }
 function isAdmin(user = currentUser){ return Boolean(user && (user.role === 'admin' || user.type === 'admin' || String(user.email).toLowerCase() === ADMIN_EMAIL)); }
@@ -538,15 +558,10 @@ async function renderDashboard(){
 function renderPlanCards(){
   const el=$('planConfigCards');
   if(!el) return;
-  const visiblePlans = ['gratis','destaque','premium'];
-  el.innerHTML = visiblePlans.map(key => { const plan = planConfig[key]; return `<article class="plan-card ${planClass(key)}">
-    <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
-    <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
-    <p>${safeText(plan.short)}</p>
-    <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
-    <small>${safeText(plan.adminNote)}</small>
-    <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
-  </article>`; }).join('');
+  el.className = 'plans-three-grid';
+  el.innerHTML = getThreePlans().map(([key, plan]) => {
+    return planCardHtml(key, plan, `<small>${safeText(plan.adminNote)}</small>`);
+  }).join('');
 }
 
 async function requestProviderPlan(plan){
@@ -571,27 +586,22 @@ async function requestProviderPlan(plan){
 async function renderPlansPage(){
   const el=$('plansPageCards');
   if(!el) return;
-  el.className = 'plans-page-list';
+  el.className = 'plans-three-grid';
+
   const providers = currentUser ? await getProviders() : [];
   const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
   const currentPlan = mine[0]?.plan || 'gratis';
   const requestedPlan = mine[0]?.planRequest || '';
-  const visiblePlans = ['gratis','destaque','premium'];
-  el.innerHTML = visiblePlans.map(key => { const plan = planConfig[key];
+
+  el.innerHTML = getThreePlans().map(([key, plan]) => {
     const isCurrent = isProviderUser() && key === currentPlan;
     const isRequested = isProviderUser() && key === requestedPlan && key !== currentPlan;
     const providerAction = isProviderUser()
       ? `<button class="${key==='premium'?'success':key==='destaque'?'secondary':'outline'}" data-request-plan="${key}" ${isCurrent?'disabled':''}>${isCurrent?'Plano atual':isRequested?'Solicitado':'Quero este plano'}</button>`
       : '';
-    return `<article class="plan-card ${planClass(key)}">
-      <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
-      <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
-      <p>${safeText(plan.short)}</p>
-      <div class="plan-photo-limit">📷 ${safeText(planPhotoText(key))}</div>
-      <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
-      ${providerAction}
-    </article>`;
+    return planCardHtml(key, plan, providerAction);
   }).join('');
+
   const info=$('plansInfoBox');
   if(info){
     if(isProviderUser()){
