@@ -40,6 +40,7 @@
       <button data-screen="buscar">Buscar</button>
       <button data-screen="solicitacoes">Pedidos</button>
       <button id="accountTabButton" data-screen="painel">Minha conta</button>
+      <button id="plansTabButton" class="hidden" data-screen="planos">Planos</button>
       <button id="adminTabButton" class="hidden" data-screen="admin">Admin</button>
     </nav>
 
@@ -217,6 +218,20 @@
     <section id="painel" class="screen">
       <h3>Meu painel</h3>
       <div id="dashboardBox"></div>
+    </section>
+
+
+    <section id="planos" class="screen">
+      <h3>Planos</h3>
+      <div class="notice small">Configure os planos comerciais do ServiFácil. Por enquanto, a cobrança é manual: o administrador define o plano de cada prestador no painel administrativo.</div>
+      <div id="plansPageCards" class="plan-grid"></div>
+      <h4>Como usar os planos</h4>
+      <div class="empty-card">
+        <p><strong>Plano Grátis:</strong> indicado para começar e permitir que o prestador apareça na busca.</p>
+        <p><strong>Plano Destaque:</strong> indicado para prestadores que querem aparecer na área de destaques.</p>
+        <p><strong>Plano Premium:</strong> indicado para maior prioridade e mais visibilidade dentro do app.</p>
+        <button data-go="admin">Gerenciar prestadores</button>
+      </div>
     </section>
 
     <section id="admin" class="screen">

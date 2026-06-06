@@ -136,6 +136,7 @@ function contactBlock(p, phone, msg){
 function updateSessionUI(){
   const badge=$('userBadge'), logout=$('btnLogout'), mode=$('dataModeBadge');
   const adminButton=$('adminTabButton');
+  const plansButton=$('plansTabButton');
   const heroLogin=$('heroLoginButton');
   const heroOffer=document.querySelector('[data-go="cadastro"]');
   const tabInicio=document.querySelector('.tabs button[data-screen="inicio"]');
@@ -169,6 +170,7 @@ function updateSessionUI(){
   if(tabBuscar) tabBuscar.classList.toggle('hidden', providerAccess);
   if(tabPedidos) tabPedidos.classList.toggle('hidden', providerAccess);
   if(adminButton) adminButton.classList.toggle('hidden', !adminAccess);
+  if(plansButton) plansButton.classList.toggle('hidden', !adminAccess);
   if(mode) mode.classList.add('hidden');
 }
 
@@ -230,7 +232,7 @@ function renderCategories(){
   $('requestCategory').innerHTML = '<option value="">Selecione uma categoria</option>'+opts;
 }
 function showScreen(id){
-  if(id==='admin' && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
+  if((id==='admin' || id==='planos') && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
   if(id==='cadastro' && !currentUser){ showToast('Entre ou crie uma conta para oferecer seus serviços.'); id = 'login'; }
   if(id==='solicitacoes' && !currentUser){ showToast('Para pedir orçamento, crie uma conta ou entre no app.'); id = 'login'; }
   if(id==='solicitacoes' && currentUser && !isClientUser()){ showToast('A tela de pedidos é exclusiva para clientes.'); id = isAdmin() ? 'admin' : 'painel'; }
@@ -245,6 +247,7 @@ function showScreen(id){
   if(id==='solicitacoes'){ renderRequestProviderOptions(); renderRequests(); fillRequestClient(); }
   if(id==='painel') renderDashboard();
   if(id==='admin') renderAdmin();
+  if(id==='planos') renderPlansPage();
   scrollTo({top:0,behavior:'smooth'});
 }
 function providerBadges(p, admin=false, owner=false){
@@ -513,10 +516,12 @@ function renderPlanCards(){
   </article>`).join('');
 }
 
+function renderPlansPage(){ const el=$('plansPageCards'); if(!el) return; el.innerHTML = Object.entries(planConfig).map(([key,plan])=>`<article class="plan-card ${planClass(key)}"><div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div><p>${safeText(plan.short)}</p><small>${safeText(plan.adminNote)}</small><ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul></article>`).join(''); }
+
 async function renderAdmin(){ renderPlanCards(); const providers=await getProviders(), requests=await getRequests(); $('totalProviders').textContent=providers.length; $('pendingProviders').textContent=providers.filter(p=>p.status==='pendente').length; $('totalRequests').textContent=requests.length; $('totalFeatured').textContent=providers.filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').length; if(!isAdmin()){ $('adminList').innerHTML='<p class="empty-card muted">Acesse com a conta admin para gerenciar o app.</p>'; return; } $('adminList').innerHTML=providers.length?providers.sort((a,b)=>(a.status==='pendente'?-1:1)).map(p=>providerCard(p,true)).join(''):'<p class="empty-card muted">Nenhum prestador cadastrado.</p>'; }
 
 function exportJson(filename,data){ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
-async function refreshAll(){ await renderCategories(); await renderFeatured(); if($('buscar').classList.contains('active-screen')) await renderProfessionals(); if($('admin').classList.contains('active-screen')) await renderAdmin(); if($('painel').classList.contains('active-screen')) await renderDashboard(); }
+async function refreshAll(){ await renderCategories(); await renderFeatured(); if($('buscar').classList.contains('active-screen')) await renderProfessionals(); if($('admin').classList.contains('active-screen')) await renderAdmin(); if($('planos') && $('planos').classList.contains('active-screen')) renderPlansPage(); if($('painel').classList.contains('active-screen')) await renderDashboard(); }
 function updateImagePreview(){ const total=($('profileImage')?.files?.length||0)+($('workImages')?.files?.length||0); $('imagePreview').textContent=total?`${total} nova(s) foto(s) selecionada(s).`:'Nenhuma nova foto selecionada.'; }
 function clearFilters(){ $('searchText').value=''; $('cityFilter').value=''; $('categoryFilter').value=''; $('planFilter').value=''; $('sortFilter').value='featured'; renderProfessionals(); }
 
