@@ -24,3 +24,16 @@ Como atualizar no GitHub Pages:
 3. Faça commit.
 4. Aguarde o GitHub Pages atualizar.
 5. No celular, feche e abra o app novamente. Se ainda aparecer a versão antiga, limpe o cache ou atualize a página.
+
+
+VERSÃO 5 - MELHORIAS IMPLEMENTADAS
+- Filtros avançados por texto, cidade/bairro, categoria e plano.
+- Ordenação por destaque, avaliação, visualizações e mais recentes.
+- Planos do prestador: Grátis, Destaque e Premium.
+- Admin pode mudar o plano do prestador pelo painel administrativo.
+- Contador de visualizações no perfil do profissional.
+- Avaliações dos clientes com nota e comentário.
+- Exportação das avaliações em JSON.
+- Solicitação de orçamento agora permite informar urgência e data desejada.
+
+Observação: o login ainda é simples para MVP. Para uso público profissional, a próxima etapa recomendada é Firebase Authentication + Firebase Storage.

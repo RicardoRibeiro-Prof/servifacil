@@ -16,13 +16,13 @@ const sampleProviders = [
     id: 'sample-provider-1', userId: null, name: 'João Silva', category: 'construcao', city: 'São Raimundo Nonato - PI', neighborhood: 'Centro',
     whatsapp: '5589999999999', price: 'A partir de R$ 50,00',
     description: 'Eletricista residencial. Faço instalação de tomadas, troca de chuveiro, manutenção em disjuntores e instalação de iluminação.',
-    rating: 4.8, featured: true, status: 'aprovado', createdAt: new Date().toISOString()
+    rating: 4.8, ratingCount: 12, views: 0, plan: 'destaque', featured: true, status: 'aprovado', createdAt: new Date().toISOString()
   },
   {
     id: 'sample-provider-2', userId: null, name: 'Maria Designer', category: 'tecnologia', city: 'São Raimundo Nonato - PI', neighborhood: 'Centro',
     whatsapp: '5589999999999', price: 'Artes a partir de R$ 30,00',
     description: 'Criação de artes para Instagram, cartões digitais, logotipos simples e materiais para divulgação.',
-    rating: 4.9, featured: true, status: 'aprovado', createdAt: new Date().toISOString()
+    rating: 4.9, ratingCount: 8, views: 0, plan: 'premium', featured: true, status: 'aprovado', createdAt: new Date().toISOString()
   }
 ];
 
@@ -120,10 +120,12 @@ async function seedFirebaseIfEmpty() {
 
 async function getUsers() { return getCollection('users', sampleUsers); }
 async function saveUsers(users) { return saveCollection('users', users); }
-async function getProviders() { return (await getCollection('providers', sampleProviders)).map(p => ({ status: 'aprovado', active: true, workImages: [], ...p })); }
+async function getProviders() { return (await getCollection('providers', sampleProviders)).map(p => ({ status: 'aprovado', active: true, workImages: [], plan: p.featured ? 'destaque' : 'gratis', views: 0, ratingCount: 0, ...p })); }
 async function saveProviders(providers) { return saveCollection('providers', providers); }
 async function getRequests() { return getCollection('requests', []); }
 async function saveRequests(requests) { return saveCollection('requests', requests); }
+async function getReviews() { return getCollection('reviews', []); }
+async function saveReviews(reviews) { return saveCollection('reviews', reviews); }
 function getSession() { return JSON.parse(localStorage.getItem('session') || 'null'); }
 function setSession(user) { localStorage.setItem('session', JSON.stringify(user)); updateSessionUI(); }
 function clearSession() { localStorage.removeItem('session'); updateSessionUI(); }
@@ -131,6 +133,9 @@ function clearSession() { localStorage.removeItem('session'); updateSessionUI();
 function categoryName(id) { return categories.find(c => c.id === id)?.name || 'Categoria'; }
 function statusLabel(status) { return status === 'aprovado' ? 'Aprovado' : status === 'bloqueado' ? 'Bloqueado' : 'Pendente'; }
 function statusClass(status) { return status === 'aprovado' ? 'approved' : status === 'bloqueado' ? 'blocked' : 'pending'; }
+function planLabel(plan) { return plan === 'premium' ? 'Premium' : plan === 'destaque' ? 'Destaque' : 'Grátis'; }
+function planClass(plan) { return plan === 'premium' ? 'premium' : plan === 'destaque' ? 'featured-plan' : 'free-plan'; }
+function planWeight(provider) { const plan = provider.plan || (provider.featured ? 'destaque' : 'gratis'); return plan === 'premium' ? 3 : plan === 'destaque' ? 2 : provider.featured ? 1 : 0; }
 
 function safeText(value) {
   return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -257,12 +262,13 @@ function providerCard(provider, admin = false, owner = false) {
         </div>
         <div class="badges">
           ${provider.featured ? '<span class="badge">Destaque</span>' : ''}
+          ${`<span class="badge ${planClass(provider.plan)}">${planLabel(provider.plan)}</span>`}
           ${provider.active === false ? '<span class="badge pending">Pausado</span>' : ''}
           ${admin || owner ? `<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>` : ''}
         </div>
       </div>
       <p>${safeText(provider.description)}</p>
-      <p><span class="rating">⭐ ${safeText(provider.rating || 'Novo')}</span>${provider.price ? ' • ' + safeText(provider.price) : ''}</p>
+      <p><span class="rating">⭐ ${safeText(provider.rating || 'Novo')}</span>${provider.price ? ' • ' + safeText(provider.price) : ''} • 👁️ ${Number(provider.views || 0)} visualizações</p>
       <div class="profile-actions">
         <button onclick="openProfile('${provider.id}')">Ver perfil</button>
         ${owner ? ownerProviderButtons(provider) : ''}
@@ -284,36 +290,57 @@ function adminProviderButtons(provider) {
     ${provider.status !== 'aprovado' ? `<button class="success" onclick="updateProviderStatus('${provider.id}', 'aprovado')">Aprovar</button>` : ''}
     ${provider.status !== 'bloqueado' ? `<button class="danger" onclick="updateProviderStatus('${provider.id}', 'bloqueado')">Bloquear</button>` : ''}
     <button class="secondary" onclick="toggleFeatured('${provider.id}')">${provider.featured ? 'Remover destaque' : 'Destacar'}</button>
+    <button class="outline" onclick="updateProviderPlan('${provider.id}', 'gratis')">Plano grátis</button>
+    <button class="outline" onclick="updateProviderPlan('${provider.id}', 'destaque')">Plano destaque</button>
+    <button class="success" onclick="updateProviderPlan('${provider.id}', 'premium')">Plano premium</button>
     <button class="danger" onclick="deleteProvider('${provider.id}')">Excluir</button>
   `;
 }
 
 async function renderFeatured() {
-  const providers = (await approvedProviders()).filter(p => p.featured);
+  const providers = (await approvedProviders()).filter(p => p.featured || p.plan === 'destaque' || p.plan === 'premium').sort((a, b) => planWeight(b) - planWeight(a) || Number(b.rating || 0) - Number(a.rating || 0));
   $('featuredList').innerHTML = providers.length ? providers.map(p => providerCard(p)).join('') : '<p class="empty-card muted">Nenhum profissional em destaque ainda.</p>';
 }
 
 async function renderProfessionals() {
   const text = $('searchText').value.toLowerCase().trim();
+  const cityText = $('cityFilter')?.value.toLowerCase().trim() || '';
   const category = $('categoryFilter').value;
+  const plan = $('planFilter')?.value || '';
   const sort = $('sortFilter').value;
   let providers = (await approvedProviders()).filter(provider => {
-    const haystack = [provider.name, provider.city, provider.neighborhood, provider.description, categoryName(provider.category)].join(' ').toLowerCase();
-    return (!text || haystack.includes(text)) && (!category || provider.category === category);
+    const haystack = [provider.name, provider.description, categoryName(provider.category)].join(' ').toLowerCase();
+    const locationHaystack = [provider.city, provider.neighborhood].join(' ').toLowerCase();
+    const providerPlan = provider.plan || (provider.featured ? 'destaque' : 'gratis');
+    return (!text || haystack.includes(text)) && (!cityText || locationHaystack.includes(cityText)) && (!category || provider.category === category) && (!plan || providerPlan === plan);
   });
 
   providers.sort((a, b) => {
     if (sort === 'rating') return Number(b.rating || 0) - Number(a.rating || 0);
+    if (sort === 'views') return Number(b.views || 0) - Number(a.views || 0);
     if (sort === 'newest') return new Date(b.createdAt) - new Date(a.createdAt);
-    return Number(b.featured) - Number(a.featured) || Number(b.rating || 0) - Number(a.rating || 0);
+    return planWeight(b) - planWeight(a) || Number(b.featured) - Number(a.featured) || Number(b.rating || 0) - Number(a.rating || 0);
   });
 
   $('professionalList').innerHTML = providers.length ? providers.map(p => providerCard(p)).join('') : '<p class="empty-card muted">Nenhum profissional encontrado com esses filtros.</p>';
 }
 
+function clearFilters() {
+  $('searchText').value = '';
+  if ($('cityFilter')) $('cityFilter').value = '';
+  $('categoryFilter').value = '';
+  if ($('planFilter')) $('planFilter').value = '';
+  $('sortFilter').value = 'featured';
+  renderProfessionals();
+}
+
 async function openProfile(id) {
-  const provider = (await getProviders()).find(p => p.id === id);
-  if (!provider) return;
+  const providersAll = await getProviders();
+  const found = providersAll.find(p => p.id === id);
+  if (!found) return;
+  const provider = { ...found, views: Number(found.views || 0) + 1 };
+  await upsertDoc('providers', provider);
+  const providerReviews = (await getReviews()).filter(r => r.providerId === provider.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const cleanPhone = provider.whatsapp.replace(/\D/g, '');
   const message = encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(provider.category)}.`);
   const whatsappLink = `https://wa.me/${cleanPhone}?text=${message}`;
@@ -322,15 +349,26 @@ async function openProfile(id) {
     <article class="profile-card">
       ${providerGallery(provider)}
       <h2>${safeText(provider.name)}</h2>
-      <p><span class="badge">${categoryName(provider.category)}</span> ${provider.featured ? '<span class="badge">Destaque</span>' : ''}</p>
+      <p><span class="badge">${categoryName(provider.category)}</span> ${provider.featured ? '<span class="badge">Destaque</span>' : ''} <span class="badge ${planClass(provider.plan)}">${planLabel(provider.plan)}</span></p>
       <p class="muted">📍 ${safeText(provider.city)}${provider.neighborhood ? ' • ' + safeText(provider.neighborhood) : ''}</p>
-      <p class="rating">⭐ ${safeText(provider.rating || 'Profissional novo')}</p>
+      <p class="rating">⭐ ${safeText(provider.rating || 'Profissional novo')} ${provider.ratingCount ? `(${provider.ratingCount} avaliação(ões))` : ''} • 👁️ ${Number(provider.views || 0)} visualizações</p>
       <h4>Descrição</h4><p>${safeText(provider.description)}</p>
       ${provider.price ? `<h4>Preço inicial</h4><p>${safeText(provider.price)}</p>` : ''}
       ${provider.photo ? `<h4>Link externo</h4><p><a href="${safeText(provider.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>` : ''}
       <div class="profile-actions">
         <a href="${whatsappLink}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a>
         <button onclick="startRequestForProvider('${provider.id}')">Solicitar orçamento pelo app</button>
+      </div>
+      <div class="review-box">
+        <h4>Avaliar profissional</h4>
+        <div class="review-form">
+          <input id="reviewName" placeholder="Seu nome" />
+          <select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select>
+          <textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea>
+          <button onclick="addReview('${provider.id}')">Enviar avaliação</button>
+        </div>
+        <h4>Avaliações recentes</h4>
+        <div class="reviews">${providerReviews.length ? providerReviews.slice(0, 5).map(reviewCard).join('') : '<p class="muted">Nenhuma avaliação ainda.</p>'}</div>
       </div>
     </article>
   `;
@@ -369,10 +407,10 @@ function requestCard(req, showActions = false) {
     <article class="request-card">
       <strong>${categoryName(req.category)}</strong>
       <div class="request-meta">
-        <span>${req.location}</span><span>${req.status}</span>${req.providerName ? `<span>Para: ${req.providerName}</span>` : '<span>Para todos da categoria</span>'}
+        <span>${safeText(req.location)}</span><span>${safeText(req.status)}</span>${req.urgency ? `<span>${safeText(req.urgency)}</span>` : ''}${req.desiredDate ? `<span>Data: ${new Date(req.desiredDate + 'T00:00:00').toLocaleDateString('pt-BR')}</span>` : ''}${req.providerName ? `<span>Para: ${safeText(req.providerName)}</span>` : '<span>Para todos da categoria</span>'}
       </div>
-      <p>${req.description}</p>
-      <p class="muted">Cliente: ${req.clientName} • ${new Date(req.createdAt).toLocaleDateString('pt-BR')}</p>
+      <p>${safeText(req.description)}</p>
+      <p class="muted">Cliente: ${safeText(req.clientName)} • ${new Date(req.createdAt).toLocaleDateString('pt-BR')}</p>
       ${showActions ? `<div class="row-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank"><button class="whatsapp">Responder no WhatsApp</button></a><button onclick="markRequestDone('${req.id}')">Marcar atendido</button></div>` : ''}
     </article>`;
 }
@@ -411,7 +449,7 @@ async function renderDashboard() {
       <div><strong>${providers.length}</strong><span>Perfis</span></div>
       <div><strong>${myRequests.length}</strong><span>Pedidos recebidos</span></div>
       <div><strong>${providers.filter(p => p.status === 'aprovado').length}</strong><span>Aprovados</span></div>
-      <div><strong>${providers.filter(p => p.featured).length}</strong><span>Destaques</span></div>
+      <div><strong>${providers.reduce((sum, p) => sum + Number(p.views || 0), 0)}</strong><span>Visualizações</span></div>
     </div>
     <h4>Meus perfis</h4>
     <div class="cards">${providers.map(p => providerCard(p, false, true)).join('')}</div>
@@ -422,8 +460,12 @@ async function renderDashboard() {
 
 async function editProvider(id) {
   const user = getSession();
-  const provider = (await getProviders()).find(p => p.id === id);
-  if (!provider) return;
+  const providersAll = await getProviders();
+  const found = providersAll.find(p => p.id === id);
+  if (!found) return;
+  const provider = { ...found, views: Number(found.views || 0) + 1 };
+  await upsertDoc('providers', provider);
+  const providerReviews = (await getReviews()).filter(r => r.providerId === provider.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   if (!user || (user.type !== 'admin' && provider.userId !== user.id && provider.name.toLowerCase() !== user.name.toLowerCase())) {
     showToast('Você não tem permissão para editar este perfil.');
     return;
@@ -469,7 +511,7 @@ async function renderAdmin() {
   $('totalProviders').textContent = providers.length;
   $('pendingProviders').textContent = providers.filter(p => p.status === 'pendente').length;
   $('totalRequests').textContent = requests.length;
-  $('totalFeatured').textContent = providers.filter(p => p.featured).length;
+  $('totalFeatured').textContent = providers.filter(p => p.featured || p.plan === 'destaque' || p.plan === 'premium').length;
 
   if (!user || user.type !== 'admin') {
     $('adminList').innerHTML = '<p class="empty-card muted">Acesse com a conta admin para gerenciar o app. Use admin@servifacil.com / 123456.</p>';
@@ -486,6 +528,15 @@ async function toggleFeatured(id) {
   await upsertDoc('providers', { ...provider, featured: !provider.featured });
   await refreshAll();
   showToast('Destaque atualizado.');
+}
+
+async function updateProviderPlan(id, plan) {
+  const providers = await getProviders();
+  const provider = providers.find(p => p.id === id);
+  if (!provider) return;
+  await upsertDoc('providers', { ...provider, plan, featured: plan === 'destaque' || plan === 'premium' ? true : false });
+  await refreshAll();
+  showToast('Plano atualizado para ' + planLabel(plan) + '.');
 }
 
 async function updateProviderStatus(id, status) {
@@ -520,10 +571,12 @@ async function clearAllData() {
     await saveCollection('providers', []);
     await saveCollection('requests', []);
     await saveCollection('users', sampleUsers);
+    await saveCollection('reviews', []);
   } else {
     localStorage.removeItem('providers');
     localStorage.removeItem('requests');
     localStorage.removeItem('users');
+    localStorage.removeItem('reviews');
   }
   localStorage.removeItem('session');
   await refreshAll();
@@ -539,6 +592,26 @@ function exportJson(filename, data) {
 }
 async function exportData() { exportJson('prestadores-servifacil.json', await getProviders()); }
 async function exportRequests() { exportJson('solicitacoes-servifacil.json', await getRequests()); }
+async function exportReviews() { exportJson('avaliacoes-servifacil.json', await getReviews()); }
+
+function reviewCard(review) {
+  return `<div class="review-card"><strong>⭐ ${safeText(review.rating)}</strong> <span>${safeText(review.clientName)}</span><p>${safeText(review.comment || 'Sem comentário.')}</p><small class="muted">${new Date(review.createdAt).toLocaleDateString('pt-BR')}</small></div>`;
+}
+
+async function addReview(providerId) {
+  const name = $('reviewName')?.value.trim();
+  const rating = Number($('reviewRating')?.value || 5);
+  const comment = $('reviewComment')?.value.trim();
+  if (!name) { showToast('Informe seu nome para avaliar.'); return; }
+  const review = { id: newId(), providerId, clientName: name, rating, comment, createdAt: new Date().toISOString() };
+  await upsertDoc('reviews', review);
+  const reviews = (await getReviews()).filter(r => r.providerId === providerId);
+  const avg = reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / Math.max(1, reviews.length);
+  const provider = (await getProviders()).find(p => p.id === providerId);
+  if (provider) await upsertDoc('providers', { ...provider, rating: Number(avg.toFixed(1)), ratingCount: reviews.length });
+  showToast('Avaliação enviada. Obrigado!');
+  await openProfile(providerId);
+}
 
 function showToast(message) {
   const toast = $('toast');
@@ -580,6 +653,9 @@ $('providerForm').addEventListener('submit', async event => {
     profileImage: newProfileImages[0] || existing?.profileImage || '',
     workImages: newWorkImages.length ? newWorkImages : (existing?.workImages || []),
     rating: existing?.rating || 'Novo',
+    ratingCount: existing?.ratingCount || 0,
+    views: existing?.views || 0,
+    plan: existing?.plan || 'gratis',
     featured: existing?.featured || false,
     active: existing?.active !== false,
     status: existing?.status || 'pendente',
@@ -627,7 +703,7 @@ $('requestForm').addEventListener('submit', async event => {
   const request = {
     id: newId(), clientUserId: user?.id || null, category: $('requestCategory').value, providerId: $('requestProvider').value,
     providerName: provider?.name || '', clientName: $('requestClientName').value.trim(), phone: $('requestPhone').value.trim(), location: $('requestLocation').value.trim(),
-    description: $('requestDescription').value.trim(), status: 'Aberto', createdAt: new Date().toISOString()
+    description: $('requestDescription').value.trim(), desiredDate: $('requestDate')?.value || '', urgency: $('requestUrgency')?.value || 'Normal', status: 'Aberto', createdAt: new Date().toISOString()
   };
   await upsertDoc('requests', request);
   event.target.reset(); fillRequestClient(); await renderRequests(); await renderDashboard(); showToast('Solicitação enviada com sucesso!');

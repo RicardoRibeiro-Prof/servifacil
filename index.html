@@ -44,7 +44,7 @@
 
     <section id="inicio" class="screen active-screen">
       <div class="notice">
-        <strong>Versão 4 implementada:</strong> fotos dos serviços, galeria de trabalhos, edição do perfil e ativar/desativar perfil no painel do prestador.
+        <strong>Versão 5 implementada:</strong> filtros avançados, planos de destaque, contador de visualizações, avaliações dos clientes e solicitações com urgência/data desejada.
       </div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
@@ -92,14 +92,23 @@
 
     <section id="buscar" class="screen">
       <h3>Buscar profissionais</h3>
-      <div class="filters">
-        <input id="searchText" type="search" placeholder="Digite serviço, nome, cidade ou bairro" oninput="renderProfessionals()" />
+      <div class="filters filters-v5">
+        <input id="searchText" type="search" placeholder="Digite serviço, nome ou descrição" oninput="renderProfessionals()" />
+        <input id="cityFilter" type="search" placeholder="Filtrar por cidade ou bairro" oninput="renderProfessionals()" />
         <select id="categoryFilter" onchange="renderProfessionals()"></select>
+        <select id="planFilter" onchange="renderProfessionals()">
+          <option value="">Todos os planos</option>
+          <option value="premium">Premium</option>
+          <option value="destaque">Destaque</option>
+          <option value="gratis">Grátis</option>
+        </select>
         <select id="sortFilter" onchange="renderProfessionals()">
           <option value="featured">Destaques primeiro</option>
           <option value="rating">Melhor avaliação</option>
+          <option value="views">Mais visualizados</option>
           <option value="newest">Mais recentes</option>
         </select>
+        <button class="outline" onclick="clearFilters()">Limpar filtros</button>
       </div>
       <div id="professionalList" class="cards"></div>
     </section>
@@ -183,6 +192,17 @@
         <label>Cidade/Bairro
           <input required id="requestLocation" placeholder="Ex: Centro, São Raimundo Nonato - PI" />
         </label>
+        <label>Data desejada
+          <input id="requestDate" type="date" />
+        </label>
+        <label>Urgência
+          <select id="requestUrgency">
+            <option value="Normal">Normal</option>
+            <option value="Urgente">Urgente</option>
+            <option value="Esta semana">Esta semana</option>
+            <option value="Sem pressa">Sem pressa</option>
+          </select>
+        </label>
         <label>Descreva o que precisa
           <textarea required id="requestDescription" rows="5" placeholder="Ex: preciso trocar uma tomada, instalar chuveiro, criar uma arte..."></textarea>
         </label>
@@ -210,6 +230,7 @@
       <div class="admin-actions">
         <button onclick="exportData()">Exportar prestadores</button>
         <button onclick="exportRequests()" class="secondary">Exportar solicitações</button>
+        <button onclick="exportReviews()" class="outline">Exportar avaliações</button>
         <button class="danger" onclick="clearAllData()">Limpar dados</button>
       </div>
 
