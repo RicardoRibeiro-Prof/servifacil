@@ -170,7 +170,7 @@ function updateSessionUI(){
   if(tabBuscar) tabBuscar.classList.toggle('hidden', providerAccess);
   if(tabPedidos) tabPedidos.classList.toggle('hidden', providerAccess);
   if(adminButton) adminButton.classList.toggle('hidden', !adminAccess);
-  if(plansButton) plansButton.classList.toggle('hidden', !adminAccess);
+  if(plansButton) plansButton.classList.toggle('hidden', !(adminAccess || providerAccess));
   if(mode) mode.classList.add('hidden');
 }
 
@@ -232,7 +232,8 @@ function renderCategories(){
   $('requestCategory').innerHTML = '<option value="">Selecione uma categoria</option>'+opts;
 }
 function showScreen(id){
-  if((id==='admin' || id==='planos') && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
+  if(id==='admin' && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
+  if(id==='planos' && !(isAdmin() || isProviderUser())){ showToast('Os planos são para prestadores de serviço.'); id = currentUser ? 'painel' : 'login'; }
   if(id==='cadastro' && !currentUser){ showToast('Entre ou crie uma conta para oferecer seus serviços.'); id = 'login'; }
   if(id==='solicitacoes' && !currentUser){ showToast('Para pedir orçamento, crie uma conta ou entre no app.'); id = 'login'; }
   if(id==='solicitacoes' && currentUser && !isClientUser()){ showToast('A tela de pedidos é exclusiva para clientes.'); id = isAdmin() ? 'admin' : 'painel'; }
@@ -258,6 +259,7 @@ function providerBadges(p, admin=false, owner=false){
     badges.push(`<span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>`);
     badges.push(`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`);
   }
+  if(admin && p.planRequest && p.planRequest !== p.plan) badges.push(`<span class="badge pending">Solicitou ${planLabel(p.planRequest)}</span>`);
   if((admin || owner) && p.active===false) badges.push('<span class="badge pending">Pausado</span>');
   return badges.join('');
 }
@@ -502,7 +504,7 @@ async function renderDashboard(){
   const requests=await getRequests(), providers=await getProviders();
   if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe seus pedidos e seus dados.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
   const myProviders=providers.filter(p=>p.userId===currentUser.id); const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category); const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
-  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meu plano</h4><div class="plan-status-card"><strong>${planFullName(myProviders[0]?.plan || 'gratis')}</strong><span>${planPrice(myProviders[0]?.plan || 'gratis')}</span><p>${planSummary(myProviders[0]?.plan || 'gratis')}</p></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
+  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meu plano</h4><div class="plan-status-card"><strong>${planFullName(myProviders[0]?.plan || 'gratis')}</strong><span>${planPrice(myProviders[0]?.plan || 'gratis')}</span><p>${planSummary(myProviders[0]?.plan || 'gratis')}</p>${myProviders[0]?.planRequest?`<p class="muted small">Solicitação enviada: ${planFullName(myProviders[0].planRequest)}</p>`:''}<button class="outline" data-go="planos">Ver planos e benefícios</button></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
 }
 
 function renderPlanCards(){
@@ -516,12 +518,62 @@ function renderPlanCards(){
   </article>`).join('');
 }
 
-function renderPlansPage(){ const el=$('plansPageCards'); if(!el) return; el.innerHTML = Object.entries(planConfig).map(([key,plan])=>`<article class="plan-card ${planClass(key)}"><div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div><p>${safeText(plan.short)}</p><small>${safeText(plan.adminNote)}</small><ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul></article>`).join(''); }
+async function requestProviderPlan(plan){
+  if(!isProviderUser()){
+    showToast('Entre como prestador para escolher um plano.');
+    showScreen(currentUser ? 'painel' : 'login');
+    return;
+  }
+  const providers = await getProviders();
+  const mine = providers.filter(p => p.userId === currentUser.id);
+  if(!mine.length){
+    showToast('Cadastre seu perfil profissional antes de escolher um plano.');
+    showScreen('cadastro');
+    return;
+  }
+  for(const p of mine){ await upsertDoc('providers', { ...p, planRequest: plan, planRequestAt: now() }); }
+  showToast(`Solicitação do ${planFullName(plan)} enviada ao administrador.`);
+  await renderDashboard();
+  await renderPlansPage();
+}
+
+async function renderPlansPage(){
+  const el=$('plansPageCards');
+  if(!el) return;
+  const providers = currentUser ? await getProviders() : [];
+  const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
+  const currentPlan = mine[0]?.plan || 'gratis';
+  const requestedPlan = mine[0]?.planRequest || '';
+  el.innerHTML = Object.entries(planConfig).map(([key,plan])=>{
+    const isCurrent = isProviderUser() && key === currentPlan;
+    const isRequested = isProviderUser() && key === requestedPlan && key !== currentPlan;
+    const providerAction = isProviderUser()
+      ? `<button class="${key==='premium'?'success':key==='destaque'?'secondary':'outline'}" data-request-plan="${key}" ${isCurrent?'disabled':''}>${isCurrent?'Plano atual':isRequested?'Solicitado':'Quero este plano'}</button>`
+      : '';
+    return `<article class="plan-card ${planClass(key)}">
+      <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
+      <p>${safeText(plan.short)}</p>
+      <ul>${plan.features.map(f=>`<li>${safeText(f)}</li>`).join('')}</ul>
+      ${providerAction}
+    </article>`;
+  }).join('');
+  const info=$('plansInfoBox');
+  if(info){
+    if(isProviderUser()){
+      info.innerHTML = `<p><strong>Como funciona:</strong> escolha o plano desejado e sua solicitação ficará registrada para o administrador aprovar e combinar o pagamento.</p><p><strong>Plano atual:</strong> ${planFullName(currentPlan)} ${requestedPlan && requestedPlan !== currentPlan ? `• Solicitação pendente: ${planFullName(requestedPlan)}` : ''}</p>`;
+    } else if(isAdmin()){
+      info.innerHTML = `<p><strong>Administração:</strong> os prestadores visualizam esta tela e podem solicitar um plano. A aprovação continua sendo feita no painel administrativo.</p><button data-go="admin">Gerenciar prestadores</button>`;
+    } else {
+      info.innerHTML = `<p>Os planos são exclusivos para prestadores de serviço.</p><button data-go="login">Entrar ou criar conta</button>`;
+    }
+  }
+}
+
 
 async function renderAdmin(){ renderPlanCards(); const providers=await getProviders(), requests=await getRequests(); $('totalProviders').textContent=providers.length; $('pendingProviders').textContent=providers.filter(p=>p.status==='pendente').length; $('totalRequests').textContent=requests.length; $('totalFeatured').textContent=providers.filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').length; if(!isAdmin()){ $('adminList').innerHTML='<p class="empty-card muted">Acesse com a conta admin para gerenciar o app.</p>'; return; } $('adminList').innerHTML=providers.length?providers.sort((a,b)=>(a.status==='pendente'?-1:1)).map(p=>providerCard(p,true)).join(''):'<p class="empty-card muted">Nenhum prestador cadastrado.</p>'; }
 
 function exportJson(filename,data){ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }
-async function refreshAll(){ await renderCategories(); await renderFeatured(); if($('buscar').classList.contains('active-screen')) await renderProfessionals(); if($('admin').classList.contains('active-screen')) await renderAdmin(); if($('planos') && $('planos').classList.contains('active-screen')) renderPlansPage(); if($('painel').classList.contains('active-screen')) await renderDashboard(); }
+async function refreshAll(){ await renderCategories(); await renderFeatured(); if($('buscar').classList.contains('active-screen')) await renderProfessionals(); if($('admin').classList.contains('active-screen')) await renderAdmin(); if($('planos') && $('planos').classList.contains('active-screen')) await renderPlansPage(); if($('painel').classList.contains('active-screen')) await renderDashboard(); }
 function updateImagePreview(){ const total=($('profileImage')?.files?.length||0)+($('workImages')?.files?.length||0); $('imagePreview').textContent=total?`${total} nova(s) foto(s) selecionada(s).`:'Nenhuma nova foto selecionada.'; }
 function clearFilters(){ $('searchText').value=''; $('cityFilter').value=''; $('categoryFilter').value=''; $('planFilter').value=''; $('sortFilter').value='featured'; renderProfessionals(); }
 
@@ -535,6 +587,7 @@ function bindEvents(){
     const active=e.target.closest('[data-toggle-active]')?.dataset.toggleActive; if(active){ await toggleProviderActive(active); return; }
     const status=e.target.closest('[data-status]')?.dataset.status; if(status){ const [id,s]=status.split('|'); await updateProviderStatus(id,s); return; }
     const plan=e.target.closest('[data-plan]')?.dataset.plan; if(plan){ const [id,p]=plan.split('|'); await updateProviderPlan(id,p); return; }
+    const requestPlan=e.target.closest('[data-request-plan]')?.dataset.requestPlan; if(requestPlan){ await requestProviderPlan(requestPlan); return; }
     const del=e.target.closest('[data-delete-provider]')?.dataset.deleteProvider; if(del){ await deleteProvider(del); return; }
     const review=e.target.closest('[data-review]')?.dataset.review; if(review){ await addReview(review); return; }
     const reqFor=e.target.closest('[data-request-for]')?.dataset.requestFor; if(reqFor){ startRequestForProvider(reqFor); return; }
