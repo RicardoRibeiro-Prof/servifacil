@@ -538,7 +538,8 @@ async function renderDashboard(){
 function renderPlanCards(){
   const el=$('planConfigCards');
   if(!el) return;
-  el.innerHTML = planOrder.map(key => { const plan = planConfig[key]; return `<article class="plan-card ${planClass(key)}">
+  const visiblePlans = ['gratis','destaque','premium'];
+  el.innerHTML = visiblePlans.map(key => { const plan = planConfig[key]; return `<article class="plan-card ${planClass(key)}">
     <div class="plan-badge">${safeText(plan.badge || plan.name)}</div>
     <div class="plan-card-head"><strong>${safeText(plan.name)}</strong><span>${safeText(plan.price)}</span></div>
     <p>${safeText(plan.short)}</p>
@@ -570,12 +571,13 @@ async function requestProviderPlan(plan){
 async function renderPlansPage(){
   const el=$('plansPageCards');
   if(!el) return;
-  el.classList.add('plans-page-list');
+  el.className = 'plans-page-list';
   const providers = currentUser ? await getProviders() : [];
   const mine = isProviderUser() ? providers.filter(p => p.userId === currentUser.id) : [];
   const currentPlan = mine[0]?.plan || 'gratis';
   const requestedPlan = mine[0]?.planRequest || '';
-  el.innerHTML = planOrder.map(key => { const plan = planConfig[key];
+  const visiblePlans = ['gratis','destaque','premium'];
+  el.innerHTML = visiblePlans.map(key => { const plan = planConfig[key];
     const isCurrent = isProviderUser() && key === currentPlan;
     const isRequested = isProviderUser() && key === requestedPlan && key !== currentPlan;
     const providerAction = isProviderUser()
