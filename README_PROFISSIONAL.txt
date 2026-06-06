@@ -1,3 +1,6 @@
+ServiFácil V7.1 Profissional
+Correção: selo de plano/destaque não aparece duplicado nos cards.
+
 SERVIFÁCIL V7 PROFISSIONAL
 
 Implementações principais:
