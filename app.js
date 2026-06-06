@@ -26,7 +26,6 @@ let deferredInstallPrompt = null;
 function newId(){ return crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2); }
 function now(){ return new Date().toISOString(); }
 function moneySafe(v){ return safeText(v || ''); }
-function displayPrice(p){ return p && p.price && String(p.price).trim() ? moneySafe(p.price) : 'Preço sob orçamento'; }
 function safeText(value){ return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char])); }
 function categoryName(id){ return categories.find(c => c.id === id)?.name || 'Categoria'; }
 function planLabel(plan){ return plan === 'premium' ? 'Premium' : plan === 'destaque' ? 'Destaque' : 'Grátis'; }
@@ -55,10 +54,10 @@ async function initFirebase(){
 }
 function updateMode(){
   const parts = [];
-  parts.push(firebaseOnline ? 'online' : 'local');
-  if(authOnline) parts.push('login seguro');
-  if(storageOnline) parts.push('fotos');
-  $('dataModeBadge').textContent = firebaseOnline ? 'Sistema online' : 'Modo local';
+  parts.push(firebaseOnline ? 'Firestore' : 'Local');
+  if(authOnline) parts.push('Auth');
+  if(storageOnline) parts.push('Storage');
+  $('dataModeBadge').textContent = firebaseOnline ? 'Online: ' + parts.join(' + ') : 'Local';
 }
 async function seedFirebaseIfEmpty(){
   if(!firebaseOnline) return;
@@ -77,36 +76,10 @@ async function handleAuthState(userCredential){
   updateSessionUI();
   await refreshAll();
 }
-function canManageProvider(user = currentUser){ return Boolean(user && (isAdmin(user) || user.role === 'prestador' || user.type === 'prestador')); }
-
 function updateSessionUI(){
-  const badge=$('userBadge'), logout=$('btnLogout'), mode=$('dataModeBadge');
-  const adminButton=$('adminTabButton');
-  const heroLogin=$('heroLoginButton');
-  const heroOffer=document.querySelector('[data-go="cadastro"]');
-  const adminAccess = isAdmin();
-
-  if(currentUser){
-    badge.textContent = adminAccess ? 'Administrador' : `Olá, ${currentUser.name || currentUser.email}`;
-    badge.classList.remove('hidden');
-    logout.classList.remove('hidden');
-    if(heroLogin) heroLogin.classList.add('hidden');
-  } else {
-    badge.classList.add('hidden');
-    logout.classList.add('hidden');
-    if(heroLogin) heroLogin.classList.remove('hidden');
-  }
-
-  const accountTab=$('accountTabButton');
-  if(accountTab) accountTab.textContent = adminAccess ? 'Dashboard' : 'Minha conta';
-
-  if(heroOffer){
-    heroOffer.classList.toggle('hidden', adminAccess);
-    heroOffer.textContent = canManageProvider() && !adminAccess ? 'Meus serviços' : 'Oferecer meus serviços';
-  }
-
-  if(adminButton) adminButton.classList.toggle('hidden', !adminAccess);
-  if(mode) mode.classList.add('hidden');
+  const badge=$('userBadge'), logout=$('btnLogout');
+  if(currentUser){ badge.textContent = `${currentUser.name || currentUser.email} • ${currentUser.role || currentUser.type}`; badge.classList.remove('hidden'); logout.classList.remove('hidden'); }
+  else{ badge.classList.add('hidden'); logout.classList.add('hidden'); }
 }
 
 async function getCollection(name, fallback=[]){
@@ -157,8 +130,6 @@ function renderCategories(){
   $('requestCategory').innerHTML = '<option value="">Selecione uma categoria</option>'+opts;
 }
 function showScreen(id){
-  if(id==='admin' && !isAdmin()){ showToast('Área administrativa restrita.'); id = currentUser ? 'painel' : 'login'; }
-  if(id==='cadastro' && !currentUser){ showToast('Entre ou crie uma conta para oferecer seus serviços.'); id = 'login'; }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active-screen'));
   $(id).classList.add('active-screen');
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
@@ -169,36 +140,18 @@ function showScreen(id){
   if(id==='admin') renderAdmin();
   scrollTo({top:0,behavior:'smooth'});
 }
-function providerBadges(p, admin=false, owner=false){
-  const status=p.status||'aprovado';
-  const isBoosted = p.featured || p.plan === 'destaque' || p.plan === 'premium';
-  const badges=[];
-  if(admin || owner){ badges.push(`<span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>`); }
-  else if(isBoosted){ badges.push('<span class="badge featured-plan">Destaque</span>'); }
-  if(p.active===false) badges.push('<span class="badge pending">Pausado</span>');
-  if(admin||owner) badges.push(`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`);
-  return badges.join('');
-}
-function providerMetaLine(p, admin=false, owner=false){
-  const parts=[];
-  if(p.rating && Number(p.ratingCount||0)>0) parts.push(`⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliações)`);
-  else parts.push('⭐ Sem avaliações ainda');
-  parts.push(displayPrice(p));
-  if(admin || owner) parts.push(`👁️ ${Number(p.views||0)} visualizações`);
-  return parts.join(' • ');
-}
 function providerCard(p, admin=false, owner=false){
-  const thumb=firstImage(p);
+  const thumb=firstImage(p), status=p.status||'aprovado';
   return `<article class="pro-card ${p.active===false?'is-paused':''}">
     ${thumb?`<div class="card-thumb">${imageTag(thumb,p.name)}</div>`:''}
-    <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
+    <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${p.featured?'<span class="badge">Destaque</span>':''}<span class="badge ${planClass(p.plan)}">${planLabel(p.plan)}</span>${p.active===false?'<span class="badge pending">Pausado</span>':''}${admin||owner?`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`:''}</div></div>
     <p>${safeText(p.description)}</p>
-    <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
+    <p><span class="rating">⭐ ${safeText(p.rating || 'Novo')}</span>${p.price?' • '+moneySafe(p.price):''} • 👁️ ${Number(p.views||0)} visualizações</p>
     <div class="profile-actions"><button data-profile="${p.id}">Ver perfil</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
   </article>`;
 }
 function ownerButtons(p){ return `<button class="secondary" data-edit="${p.id}">Editar perfil</button><button class="outline" data-toggle-active="${p.id}">${p.active===false?'Ativar perfil':'Pausar perfil'}</button>`; }
-function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Plano grátis</button><button class="secondary" data-plan="${p.id}|destaque">Plano destaque</button><button class="success" data-plan="${p.id}|premium">Plano premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
+function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Grátis</button><button class="secondary" data-plan="${p.id}|destaque">Destaque</button><button class="success" data-plan="${p.id}|premium">Premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
 async function renderFeatured(){ const list=(await approvedProviders()).filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').sort((a,b)=>planWeight(b)-planWeight(a)||Number(b.rating||0)-Number(a.rating||0)); $('featuredList').innerHTML=list.length?list.map(p=>providerCard(p)).join(''):'<p class="empty-card muted">Nenhum profissional em destaque ainda.</p>'; }
 async function renderProfessionals(){
   const text=$('searchText').value.toLowerCase().trim(), city=$('cityFilter').value.toLowerCase().trim(), cat=$('categoryFilter').value, plan=$('planFilter').value, sort=$('sortFilter').value;
@@ -211,9 +164,7 @@ async function openProfile(id){
   const p={...found, views:Number(found.views||0)+1}; await upsertDoc('providers',p);
   const reviews=(await getReviews()).filter(r=>r.providerId===p.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const phone=String(p.whatsapp||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(p.category)}.`);
-  const profileBadges = `<span class="badge">${categoryName(p.category)}</span>${(p.featured || p.plan==='destaque' || p.plan==='premium') ? ' <span class="badge featured-plan">Destaque</span>' : ''}`;
-  const ratingText = p.rating && Number(p.ratingCount||0)>0 ? `⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliação(ões))` : '⭐ Sem avaliações ainda';
-  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a><button data-request-for="${p.id}">Solicitar orçamento pelo app</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
+  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p><span class="badge">${categoryName(p.category)}</span> <span class="badge ${planClass(p.plan)}">${planLabel(p.plan)}</span>${p.featured?' <span class="badge">Destaque</span>':''}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">⭐ ${safeText(p.rating || 'Profissional novo')} ${p.ratingCount?`(${p.ratingCount} avaliação(ões))`:''} • 👁️ ${Number(p.views||0)} visualizações</p><h4>Descrição</h4><p>${safeText(p.description)}</p>${p.price?`<h4>Preço inicial</h4><p>${safeText(p.price)}</p>`:''}${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a><button data-request-for="${p.id}">Solicitar orçamento pelo app</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
   showScreen('perfil'); renderFeatured();
 }
 function reviewCard(r){ return `<div class="review-card"><strong>⭐ ${safeText(r.rating)}</strong> <span>${safeText(r.clientName)}</span><p>${safeText(r.comment || 'Sem comentário.')}</p><small class="muted">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small></div>`; }
@@ -241,7 +192,7 @@ async function logout(){ if(authOnline) await auth.signOut(); currentUser=null; 
 async function saveProvider(event){
   event.preventDefault();
   if(!currentUser){ showToast('Entre na sua conta para cadastrar um serviço.'); showScreen('login'); return; }
-  await ensureProviderRole();
+  if(!(currentUser.role==='prestador'||currentUser.type==='prestador'||isAdmin())){ showToast('Crie uma conta de prestador para oferecer serviços.'); return; }
   const providers=await getProviders(); const editId=$('editingProviderId').value; const old=providers.find(p=>p.id===editId); const id=editId||newId();
   if(old && !isAdmin() && old.userId!==currentUser.id){ showToast('Você não tem permissão para editar este perfil.'); return; }
   showToast('Salvando perfil e fotos...');
@@ -268,9 +219,9 @@ async function renderDashboard(){
   if(!currentUser){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Entre ou crie uma conta para acessar seu painel.</p><button data-go="login">Entrar agora</button></div>'; return; }
   if(isAdmin()){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Você está como administrador.</p><button data-go="admin">Abrir painel administrativo</button></div>'; return; }
   const requests=await getRequests(), providers=await getProviders();
-  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe suas solicitações e, se desejar, cadastre-se também como prestador.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
+  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}<button data-go="solicitacoes">Nova solicitação</button></div>`; return; }
   const myProviders=providers.filter(p=>p.userId===currentUser.id); const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category); const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
-  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
+  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Cadastrar serviço</button></div>';
 }
 async function renderAdmin(){ const providers=await getProviders(), requests=await getRequests(); $('totalProviders').textContent=providers.length; $('pendingProviders').textContent=providers.filter(p=>p.status==='pendente').length; $('totalRequests').textContent=requests.length; $('totalFeatured').textContent=providers.filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').length; if(!isAdmin()){ $('adminList').innerHTML='<p class="empty-card muted">Acesse com a conta admin para gerenciar o app.</p>'; return; } $('adminList').innerHTML=providers.length?providers.sort((a,b)=>(a.status==='pendente'?-1:1)).map(p=>providerCard(p,true)).join(''):'<p class="empty-card muted">Nenhum prestador cadastrado.</p>'; }
 
