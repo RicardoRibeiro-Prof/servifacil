@@ -106,3 +106,11 @@ ATUALIZAÇÃO NO GITHUB:
 
 OBSERVAÇÃO:
 Para uso comercial sério, o ideal é futuramente adicionar Cloud Functions e custom claims para validar admin no servidor. Esta versão já é bem mais profissional que a anterior e suficiente para o MVP público.
+
+
+V7.2 - Limpeza visual
+- Remove informações técnicas da tela inicial.
+- Remove selo duplicado de destaque.
+- Oculta planos no card público do profissional.
+- Exibe visualizações apenas em áreas de gestão.
+- Atualiza o cache do PWA para forçar renovação.

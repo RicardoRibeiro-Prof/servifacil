@@ -54,10 +54,10 @@ async function initFirebase(){
 }
 function updateMode(){
   const parts = [];
-  parts.push(firebaseOnline ? 'Firestore' : 'Local');
-  if(authOnline) parts.push('Auth');
-  if(storageOnline) parts.push('Storage');
-  $('dataModeBadge').textContent = firebaseOnline ? 'Online: ' + parts.join(' + ') : 'Local';
+  parts.push(firebaseOnline ? 'online' : 'local');
+  if(authOnline) parts.push('login seguro');
+  if(storageOnline) parts.push('fotos');
+  $('dataModeBadge').textContent = firebaseOnline ? 'Sistema online' : 'Modo local';
 }
 async function seedFirebaseIfEmpty(){
   if(!firebaseOnline) return;
@@ -77,9 +77,10 @@ async function handleAuthState(userCredential){
   await refreshAll();
 }
 function updateSessionUI(){
-  const badge=$('userBadge'), logout=$('btnLogout');
-  if(currentUser){ badge.textContent = `${currentUser.name || currentUser.email} • ${currentUser.role || currentUser.type}`; badge.classList.remove('hidden'); logout.classList.remove('hidden'); }
+  const badge=$('userBadge'), logout=$('btnLogout'), mode=$('dataModeBadge');
+  if(currentUser){ badge.textContent = `Olá, ${currentUser.name || currentUser.email}`; badge.classList.remove('hidden'); logout.classList.remove('hidden'); }
   else{ badge.classList.add('hidden'); logout.classList.add('hidden'); }
+  if(mode) mode.classList.add('hidden');
 }
 
 async function getCollection(name, fallback=[]){
@@ -140,18 +141,36 @@ function showScreen(id){
   if(id==='admin') renderAdmin();
   scrollTo({top:0,behavior:'smooth'});
 }
+function providerBadges(p, admin=false, owner=false){
+  const status=p.status||'aprovado';
+  const isBoosted = p.featured || p.plan === 'destaque' || p.plan === 'premium';
+  const badges=[];
+  if(admin || owner){ badges.push(`<span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>`); }
+  else if(isBoosted){ badges.push('<span class="badge featured-plan">Destaque</span>'); }
+  if(p.active===false) badges.push('<span class="badge pending">Pausado</span>');
+  if(admin||owner) badges.push(`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`);
+  return badges.join('');
+}
+function providerMetaLine(p, admin=false, owner=false){
+  const parts=[];
+  if(p.rating && Number(p.ratingCount||0)>0) parts.push(`⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliações)`);
+  else parts.push('⭐ Sem avaliações ainda');
+  if(p.price) parts.push(moneySafe(p.price));
+  if(admin || owner) parts.push(`👁️ ${Number(p.views||0)} visualizações`);
+  return parts.join(' • ');
+}
 function providerCard(p, admin=false, owner=false){
-  const thumb=firstImage(p), status=p.status||'aprovado';
+  const thumb=firstImage(p);
   return `<article class="pro-card ${p.active===false?'is-paused':''}">
     ${thumb?`<div class="card-thumb">${imageTag(thumb,p.name)}</div>`:''}
-    <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges"><span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>${p.featured && (p.plan||'gratis')==='gratis'?'<span class="badge">Em destaque</span>':''}${p.active===false?'<span class="badge pending">Pausado</span>':''}${admin||owner?`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`:''}</div></div>
+    <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
     <p>${safeText(p.description)}</p>
-    <p><span class="rating">⭐ ${safeText(p.rating || 'Novo')}</span>${p.price?' • '+moneySafe(p.price):''} • 👁️ ${Number(p.views||0)} visualizações</p>
+    <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
     <div class="profile-actions"><button data-profile="${p.id}">Ver perfil</button>${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
   </article>`;
 }
 function ownerButtons(p){ return `<button class="secondary" data-edit="${p.id}">Editar perfil</button><button class="outline" data-toggle-active="${p.id}">${p.active===false?'Ativar perfil':'Pausar perfil'}</button>`; }
-function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Grátis</button><button class="secondary" data-plan="${p.id}|destaque">Destaque</button><button class="success" data-plan="${p.id}|premium">Premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
+function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Plano grátis</button><button class="secondary" data-plan="${p.id}|destaque">Plano destaque</button><button class="success" data-plan="${p.id}|premium">Plano premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
 async function renderFeatured(){ const list=(await approvedProviders()).filter(p=>p.featured||p.plan==='destaque'||p.plan==='premium').sort((a,b)=>planWeight(b)-planWeight(a)||Number(b.rating||0)-Number(a.rating||0)); $('featuredList').innerHTML=list.length?list.map(p=>providerCard(p)).join(''):'<p class="empty-card muted">Nenhum profissional em destaque ainda.</p>'; }
 async function renderProfessionals(){
   const text=$('searchText').value.toLowerCase().trim(), city=$('cityFilter').value.toLowerCase().trim(), cat=$('categoryFilter').value, plan=$('planFilter').value, sort=$('sortFilter').value;
@@ -164,7 +183,9 @@ async function openProfile(id){
   const p={...found, views:Number(found.views||0)+1}; await upsertDoc('providers',p);
   const reviews=(await getReviews()).filter(r=>r.providerId===p.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const phone=String(p.whatsapp||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(p.category)}.`);
-  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p><span class="badge">${categoryName(p.category)}</span> <span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>${p.featured && (p.plan||'gratis')==='gratis'?' <span class="badge">Em destaque</span>':''}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">⭐ ${safeText(p.rating || 'Profissional novo')} ${p.ratingCount?`(${p.ratingCount} avaliação(ões))`:''} • 👁️ ${Number(p.views||0)} visualizações</p><h4>Descrição</h4><p>${safeText(p.description)}</p>${p.price?`<h4>Preço inicial</h4><p>${safeText(p.price)}</p>`:''}${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a><button data-request-for="${p.id}">Solicitar orçamento pelo app</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
+  const profileBadges = `<span class="badge">${categoryName(p.category)}</span>${(p.featured || p.plan==='destaque' || p.plan==='premium') ? ' <span class="badge featured-plan">Destaque</span>' : ''}`;
+  const ratingText = p.rating && Number(p.ratingCount||0)>0 ? `⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliação(ões))` : '⭐ Sem avaliações ainda';
+  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p>${p.price?`<h4>Preço inicial</h4><p>${safeText(p.price)}</p>`:''}${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}<div class="profile-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank" rel="noopener"><button class="whatsapp">Chamar no WhatsApp</button></a><button data-request-for="${p.id}">Solicitar orçamento pelo app</button></div><div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
   showScreen('perfil'); renderFeatured();
 }
 function reviewCard(r){ return `<div class="review-card"><strong>⭐ ${safeText(r.rating)}</strong> <span>${safeText(r.clientName)}</span><p>${safeText(r.comment || 'Sem comentário.')}</p><small class="muted">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small></div>`; }

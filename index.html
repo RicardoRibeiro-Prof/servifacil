@@ -17,7 +17,7 @@
     <div class="top-actions">
       <span id="userBadge" class="pill hidden"></span>
       <button id="btnInstall" class="install-btn hidden">Instalar</button>
-      <span id="dataModeBadge" class="pill">Carregando...</span>
+      <span id="dataModeBadge" class="pill hidden">Carregando...</span>
       <button id="btnLogout" class="ghost hidden">Sair</button>
     </div>
   </header>
@@ -27,17 +27,17 @@
       <div>
         <span class="eyebrow">Serviços locais com gestão profissional</span>
         <h2>Encontre profissionais perto de você</h2>
-        <p>Busque por categoria, cidade, bairro, avaliação ou plano. Solicite orçamento e fale direto pelo WhatsApp.</p>
+        <p>Busque por categoria, cidade, bairro e avaliação. Solicite orçamento e fale direto pelo WhatsApp.</p>
         <div class="hero-actions">
           <button data-go="buscar">Buscar serviço</button>
           <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
           <button class="outline" data-go="login">Entrar / Criar conta</button>
         </div>
       </div>
-      <div class="hero-card">
-        <strong>Versão 7 Profissional</strong>
-        <span>Firebase Auth + Firestore + Storage</span>
-        <span>Login seguro e upload real de fotos</span>
+      <div class="hero-card clean-card">
+        <strong>Encontre, compare e solicite orçamento</strong>
+        <span>Profissionais locais organizados por categoria</span>
+        <span>Contato rápido pelo WhatsApp</span>
       </div>
     </section>
 
@@ -51,7 +51,7 @@
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <div class="notice"><strong>Versão 7 implementada:</strong> login profissional com Firebase Authentication, fotos no Firebase Storage, regras de segurança sugeridas, painel mais limpo e dados sem senha salva no Firestore.</div>
+      <div class="notice"><strong>Bem-vindo ao ServiFácil:</strong> encontre profissionais locais, veja perfis e solicite orçamento de forma simples.</div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
       <h3>Profissionais em destaque</h3>
@@ -101,7 +101,7 @@
         <input id="searchText" type="search" placeholder="Serviço, nome ou descrição" />
         <input id="cityFilter" type="search" placeholder="Cidade ou bairro" />
         <select id="categoryFilter"></select>
-        <select id="planFilter">
+        <select id="planFilter" class="hidden">
           <option value="">Todos os planos</option>
           <option value="premium">Premium</option>
           <option value="destaque">Destaque</option>
