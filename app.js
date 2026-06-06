@@ -133,7 +133,17 @@ async function resizeImageToBlob(file, maxWidth=1000, quality=.76){
 }
 async function fileToDataUrl(file){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=reject; reader.onload=()=>resolve(reader.result); reader.readAsDataURL(file); }); }
 async function uploadImage(file, path){
-  if(storageOnline && currentUser){ const blob = await resizeImageToBlob(file); const ref = storage.ref().child(path); await ref.put(blob, { contentType:'image/jpeg' }); return ref.getDownloadURL(); }
+  if(storageOnline && currentUser){
+    try{
+      const blob = await resizeImageToBlob(file);
+      const ref = storage.ref().child(path);
+      await ref.put(blob, { contentType:'image/jpeg' });
+      return await ref.getDownloadURL();
+    }catch(err){
+      console.warn('Falha no upload para Storage. Usando imagem local/Base64 como alternativa.', err);
+      showToast('Não consegui enviar a foto ao Storage. Vou salvar o perfil com foto local para teste.');
+    }
+  }
   return fileToDataUrl(file);
 }
 async function processProviderImages(providerId, existing={}){
@@ -238,16 +248,38 @@ async function createAccount(name,email,password,type){
 }
 async function logout(){ if(authOnline) await auth.signOut(); currentUser=null; updateSessionUI(); showToast('Você saiu da conta.'); showScreen('inicio'); }
 
+
+async function ensureProviderRole(){
+  if(!currentUser || isAdmin()) return;
+  if(currentUser.role === 'prestador' || currentUser.type === 'prestador') return;
+  currentUser = { ...currentUser, role:'prestador', type:'prestador', updatedAt:now() };
+  if(firebaseOnline && db){
+    await db.collection('users').doc(currentUser.id).set(currentUser, { merge:true });
+  } else {
+    const users = localGet('users', []);
+    const idx = users.findIndex(u => u.id === currentUser.id || String(u.email).toLowerCase() === String(currentUser.email).toLowerCase());
+    if(idx >= 0) users[idx] = { ...users[idx], ...currentUser };
+    else users.push(currentUser);
+    localSet('users', users);
+  }
+  updateSessionUI();
+}
+
 async function saveProvider(event){
   event.preventDefault();
   if(!currentUser){ showToast('Entre na sua conta para cadastrar um serviço.'); showScreen('login'); return; }
-  await ensureProviderRole();
-  const providers=await getProviders(); const editId=$('editingProviderId').value; const old=providers.find(p=>p.id===editId); const id=editId||newId();
-  if(old && !isAdmin() && old.userId!==currentUser.id){ showToast('Você não tem permissão para editar este perfil.'); return; }
-  showToast('Salvando perfil e fotos...');
-  const imgs=await processProviderImages(id, old||{});
-  const item={ id, userId:old?.userId||currentUser.id, name:$('name').value.trim(), category:$('category').value, city:$('city').value.trim(), neighborhood:$('neighborhood').value.trim(), whatsapp:$('whatsapp').value.trim(), price:$('price').value.trim(), description:$('description').value.trim(), photo:$('photo').value.trim(), ...imgs, status:old?.status || (isAdmin()?'aprovado':'pendente'), active:old?.active ?? true, plan:old?.plan || 'gratis', featured:old?.featured || false, rating:old?.rating || null, ratingCount:old?.ratingCount || 0, views:old?.views || 0, createdAt:old?.createdAt || now(), updatedAt:now() };
-  await upsertDoc('providers', item); cancelProviderEdit(false); await refreshAll(); showToast(editId?'Perfil atualizado.':'Cadastro enviado para aprovação.'); showScreen('painel');
+  try{
+    await ensureProviderRole();
+    const providers=await getProviders(); const editId=$('editingProviderId').value; const old=providers.find(p=>p.id===editId); const id=editId||newId();
+    if(old && !isAdmin() && old.userId!==currentUser.id){ showToast('Você não tem permissão para editar este perfil.'); return; }
+    showToast('Salvando perfil e fotos...');
+    const imgs=await processProviderImages(id, old||{});
+    const item={ id, userId:old?.userId||currentUser.id, name:$('name').value.trim(), category:$('category').value, city:$('city').value.trim(), neighborhood:$('neighborhood').value.trim(), whatsapp:$('whatsapp').value.trim(), price:$('price').value.trim(), description:$('description').value.trim(), photo:$('photo').value.trim(), ...imgs, status:old?.status || (isAdmin()?'aprovado':'pendente'), active:old?.active ?? true, plan:old?.plan || 'gratis', featured:old?.featured || false, rating:old?.rating || null, ratingCount:old?.ratingCount || 0, views:old?.views || 0, createdAt:old?.createdAt || now(), updatedAt:now() };
+    await upsertDoc('providers', item); cancelProviderEdit(false); await refreshAll(); showToast(editId?'Perfil atualizado.':'Cadastro enviado para aprovação.'); showScreen('painel');
+  }catch(err){
+    console.error(err);
+    showToast('Não foi possível salvar. Verifique as regras do Firebase ou tente sem foto.');
+  }
 }
 async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id){ showToast('Você não tem permissão para editar este perfil.'); return; } $('editingProviderId').value=p.id; $('name').value=p.name||''; $('category').value=p.category||''; $('city').value=p.city||''; $('neighborhood').value=p.neighborhood||''; $('whatsapp').value=p.whatsapp||''; $('price').value=p.price||''; $('description').value=p.description||''; $('photo').value=p.photo||''; $('providerSubmitButton').textContent='Salvar alterações'; $('cancelEditProvider').classList.remove('hidden'); updateImagePreview(); showScreen('cadastro'); }
 function cancelProviderEdit(toast=true){ $('providerForm').reset(); $('editingProviderId').value=''; $('providerSubmitButton').textContent='Cadastrar serviço'; $('cancelEditProvider').classList.add('hidden'); updateImagePreview(); if(toast) showToast('Edição cancelada.'); }
