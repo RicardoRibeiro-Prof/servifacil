@@ -383,11 +383,59 @@ async function openProfile(id){
   const phone=String(p.whatsapp||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá, vi seu perfil no ServiFácil e gostaria de solicitar um orçamento para: ${categoryName(p.category)}.`);
   const profileBadges = `<span class="badge">${categoryName(p.category)}</span>`;
   const ratingText = p.rating && Number(p.ratingCount||0)>0 ? `⭐ ${safeText(p.rating)} (${Number(p.ratingCount)} avaliação(ões))` : '⭐ Sem avaliações ainda';
-  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}${contactBlock(p, phone, msg)}<div class="review-box"><h4>Avaliar profissional</h4><div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${currentUser?safeText(currentUser.name):''}"><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div><h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
+  $('profileBox').innerHTML=`<article class="profile-card">${providerGallery(p)}<h2>${safeText(p.name)}</h2><p>${profileBadges}</p><p class="muted">📍 ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p><p class="rating">${ratingText}</p><h4>Descrição</h4><p>${safeText(p.description)}</p><h4>Preço</h4><p>${displayPrice(p)}</p>${p.photo?`<h4>Link externo</h4><p><a href="${safeText(p.photo)}" target="_blank" rel="noopener">Abrir Instagram, site ou portfólio</a></p>`:''}${contactBlock(p, phone, msg)}<div class="review-box"><h4>Avaliações e comentários</h4>${currentUser && isClientUser() ? `<div class="review-form"><input id="reviewName" placeholder="Seu nome" value="${safeText(currentUser.name || '')}" readonly><select id="reviewRating"><option value="5">5 estrelas</option><option value="4">4 estrelas</option><option value="3">3 estrelas</option><option value="2">2 estrelas</option><option value="1">1 estrela</option></select><textarea id="reviewComment" rows="3" placeholder="Comentário sobre o atendimento"></textarea><button data-review="${p.id}">Enviar avaliação</button></div>` : `<div class="contact-lock"><strong>Entre como cliente para avaliar</strong><p>Somente usuários cadastrados podem deixar avaliações e comentários.</p><button data-go="login">Entrar ou criar conta</button></div>`}<h4>Avaliações recentes</h4><div>${reviews.length?reviews.map(reviewCard).join(''):'<p class="muted">Nenhuma avaliação ainda.</p>'}</div></div></article>`;
   showScreen('perfil'); renderFeatured();
 }
 function reviewCard(r){ return `<div class="review-card"><strong>⭐ ${safeText(r.rating)}</strong> <span>${safeText(r.clientName)}</span><p>${safeText(r.comment || 'Sem comentário.')}</p><small class="muted">${new Date(r.createdAt).toLocaleDateString('pt-BR')}</small></div>`; }
-async function addReview(providerId){ const name=$('reviewName').value.trim()||'Cliente'; const rating=Number($('reviewRating').value); const comment=$('reviewComment').value.trim(); await upsertDoc('reviews',{id:newId(),providerId,clientName:name,rating,comment,clientUserId:currentUser?.id||null,createdAt:now()}); const reviews=(await getReviews()).filter(r=>r.providerId===providerId); const avg=reviews.reduce((s,r)=>s+Number(r.rating||0),0)/Math.max(1,reviews.length); const p=(await getProviders()).find(x=>x.id===providerId); if(p) await upsertDoc('providers',{...p,rating:Number(avg.toFixed(1)),ratingCount:reviews.length}); await openProfile(providerId); showToast('Avaliação enviada.'); }
+async function addReview(providerId){
+  if(!currentUser){
+    showToast('Entre ou crie uma conta para avaliar este prestador.');
+    showScreen('login');
+    return;
+  }
+
+  if(isProviderUser() || isAdmin()){
+    showToast('Avaliações são destinadas a clientes cadastrados.');
+    return;
+  }
+
+  const name = currentUser.name || $('reviewName').value.trim() || 'Cliente';
+  const rating = Number($('reviewRating').value);
+  const comment = $('reviewComment').value.trim();
+
+  if(!rating || rating < 1 || rating > 5){
+    showToast('Escolha uma nota de 1 a 5.');
+    return;
+  }
+
+  if(!comment){
+    showToast('Escreva um comentário sobre o atendimento.');
+    return;
+  }
+
+  const existing = (await getReviews()).find(r => r.providerId === providerId && r.clientUserId === currentUser.id);
+  if(existing){
+    showToast('Você já avaliou este prestador.');
+    return;
+  }
+
+  await upsertDoc('reviews',{
+    id:newId(),
+    providerId,
+    clientName:name,
+    rating,
+    comment,
+    clientUserId:currentUser.id,
+    createdAt:now()
+  });
+
+  const reviews=(await getReviews()).filter(r=>r.providerId===providerId);
+  const avg=reviews.reduce((s,r)=>s+Number(r.rating||0),0)/Math.max(1,reviews.length);
+  const p=(await getProviders()).find(x=>x.id===providerId);
+  if(p) await upsertDoc('providers',{...p,rating:Number(avg.toFixed(1)),ratingCount:reviews.length});
+  await openProfile(providerId);
+  showToast('Avaliação enviada.');
+}
 
 async function login(email,password){
   if(authOnline){

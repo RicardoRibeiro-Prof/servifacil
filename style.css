@@ -614,3 +614,12 @@ button, .tabs button, input, select, textarea{
     height:230px;
   }
 }
+
+/* Avaliações restritas a clientes cadastrados */
+.review-box .contact-lock{
+  margin-top:8px;
+}
+.review-form input[readonly]{
+  background:#f1f5f9;
+  color:#475569;
+}
