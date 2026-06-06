@@ -69,7 +69,7 @@ async function handleAuthState(userCredential){
   if(!userCredential){ currentUser=null; updateSessionUI(); return; }
   const ref = db.collection('users').doc(userCredential.uid);
   const snap = await ref.get();
-  if(snap.exists){ currentUser = { id:userCredential.uid, ...snap.data() }; }
+  if(snap.exists){ currentUser = { ...snap.data(), id:userCredential.uid, email:userCredential.email || snap.data().email }; // mantém o UID real do Authentication como id }
   else{
     currentUser = { id:userCredential.uid, name:userCredential.displayName || userCredential.email.split('@')[0], email:userCredential.email, role:String(userCredential.email).toLowerCase()===ADMIN_EMAIL ? 'admin':'cliente', type:String(userCredential.email).toLowerCase()===ADMIN_EMAIL ? 'admin':'cliente', createdAt:now() };
     await ref.set(currentUser, { merge:true });
@@ -272,15 +272,22 @@ async function logout(){ if(authOnline) await auth.signOut(); currentUser=null; 
 async function ensureProviderRole(){
   if(!currentUser || isAdmin()) return;
   if(currentUser.role === 'prestador' || currentUser.type === 'prestador') return;
-  currentUser = { ...currentUser, role:'prestador', type:'prestador', updatedAt:now() };
-  if(firebaseOnline && db){
-    await db.collection('users').doc(currentUser.id).set(currentUser, { merge:true });
-  } else {
-    const users = localGet('users', []);
-    const idx = users.findIndex(u => u.id === currentUser.id || String(u.email).toLowerCase() === String(currentUser.email).toLowerCase());
-    if(idx >= 0) users[idx] = { ...users[idx], ...currentUser };
-    else users.push(currentUser);
-    localSet('users', users);
+  const updatedUser = { ...currentUser, role:'prestador', type:'prestador', updatedAt:now() };
+  currentUser = updatedUser;
+  try{
+    if(firebaseOnline && db){
+      // O documento precisa usar o UID real do Firebase Authentication.
+      // Se a atualização do usuário falhar, o cadastro do prestador ainda deve continuar.
+      await db.collection('users').doc(currentUser.id).set(updatedUser, { merge:true });
+    } else {
+      const users = localGet('users', []);
+      const idx = users.findIndex(u => u.id === currentUser.id || String(u.email).toLowerCase() === String(currentUser.email).toLowerCase());
+      if(idx >= 0) users[idx] = { ...users[idx], ...updatedUser };
+      else users.push(updatedUser);
+      localSet('users', users);
+    }
+  }catch(err){
+    console.warn('Não consegui atualizar o tipo do usuário, mas vou continuar salvando o prestador.', err);
   }
   updateSessionUI();
 }
@@ -321,9 +328,13 @@ async function saveProvider(event){
     showToast(editId?'Perfil atualizado.':'Cadastro enviado para aprovação.');
     showScreen('painel');
   }catch(err){
-    console.error(err);
-    const msg = err?.code === 'permission-denied' ? 'Firebase bloqueou o cadastro. Confira as regras do Firestore.' : 'Não foi possível salvar. Tente novamente sem foto ou confira o Firebase.';
+    console.error('Erro ao salvar prestador:', err);
+    const detalhe = err?.code ? ` (${err.code})` : '';
+    const msg = err?.code === 'permission-denied'
+      ? 'Firebase bloqueou o cadastro. Confira as regras do Firestore.'
+      : 'Não foi possível salvar o cadastro' + detalhe + '. Teste sem foto e confira sua conexão.';
     showToast(msg);
+    alert(msg + '\n\nDetalhe técnico: ' + (err?.message || 'sem detalhe'));
   }
 }
 
