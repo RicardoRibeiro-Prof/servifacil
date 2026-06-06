@@ -23,14 +23,38 @@
   </header>
 
   <main>
-    <section class="hero">
-      <div>
-        <h2>Encontre profissionais perto de você</h2>
-        <p>Encontre profissionais, veja detalhes e peça orçamento pelo WhatsApp.</p>
+    <section class="hero workana-hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Marketplace de serviços locais</span>
+        <h2>Contrate profissionais de confiança na sua região</h2>
+        <p>Publique sua necessidade, compare profissionais, veja fotos, avaliações e fale com o prestador certo pelo WhatsApp.</p>
         <div class="hero-actions">
-          <button data-go="buscar">Buscar serviço</button>
-          <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
+          <button data-go="buscar">Encontrar profissional</button>
+          <button class="secondary" data-go="solicitacoes">Publicar pedido</button>
           <button id="heroLoginButton" class="outline" data-go="login">Entrar / Criar conta</button>
+        </div>
+        <div class="trust-row">
+          <span>✓ Clientes cadastrados</span>
+          <span>✓ Avaliações reais</span>
+          <span>✓ Profissionais aprovados</span>
+        </div>
+      </div>
+
+      <div class="hero-panel">
+        <div class="hero-panel-card">
+          <span class="panel-icon">🔎</span>
+          <strong>Encontre por categoria</strong>
+          <p>Busque profissionais por área, cidade e bairro.</p>
+        </div>
+        <div class="hero-panel-card">
+          <span class="panel-icon">📸</span>
+          <strong>Compare perfis</strong>
+          <p>Veja fotos, descrição, preço e avaliações.</p>
+        </div>
+        <div class="hero-panel-card">
+          <span class="panel-icon">💬</span>
+          <strong>Solicite orçamento</strong>
+          <p>Entre em contato apenas após criar sua conta.</p>
         </div>
       </div>
     </section>
@@ -45,10 +69,75 @@
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <h3>Categorias populares</h3>
-      <div id="categoryGrid" class="category-grid"></div>
-      <h3>Destaques da sua região</h3>
-      <div id="featuredList" class="cards"></div>
+      <section class="quick-choice">
+        <article>
+          <span>Quero contratar</span>
+          <h3>Preciso de um profissional</h3>
+          <p>Encontre prestadores locais, compare perfis e solicite orçamento.</p>
+          <button data-go="buscar">Buscar profissionais</button>
+        </article>
+        <article>
+          <span>Quero trabalhar</span>
+          <h3>Quero oferecer meus serviços</h3>
+          <p>Cadastre seu perfil profissional, adicione fotos e receba contatos.</p>
+          <button class="secondary" data-go="cadastro">Cadastrar meu serviço</button>
+        </article>
+      </section>
+
+      <section class="home-section">
+        <div class="section-title-row">
+          <div>
+            <h3>Categorias populares</h3>
+            <p>Escolha uma área para encontrar profissionais perto de você.</p>
+          </div>
+          <button class="outline small-btn" data-go="buscar">Ver todos</button>
+        </div>
+        <div id="categoryGrid" class="category-grid"></div>
+      </section>
+
+      <section class="home-section steps-section">
+        <h3>Como funciona</h3>
+        <div class="steps-grid">
+          <article>
+            <span>1</span>
+            <strong>Busque ou publique um pedido</strong>
+            <p>Escolha uma categoria ou descreva o serviço que precisa.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <strong>Compare profissionais</strong>
+            <p>Veja perfil, fotos, avaliações, localização e preço sob orçamento.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <strong>Fale com segurança</strong>
+            <p>Entre em contato após criar conta e acompanhe seus pedidos no painel.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-section">
+        <div class="section-title-row">
+          <div>
+            <h3>Destaques da sua região</h3>
+            <p>Profissionais com mais visibilidade no ServiFácil.</p>
+          </div>
+        </div>
+        <div id="featuredList" class="cards"></div>
+      </section>
+
+      <section class="home-section trust-section">
+        <div>
+          <h3>Mais confiança para contratar</h3>
+          <p>O ServiFácil organiza profissionais locais em um só lugar, com perfis aprovados, fotos, avaliações e contato protegido para usuários cadastrados.</p>
+        </div>
+        <div class="trust-cards">
+          <span>⭐ Avaliações de clientes</span>
+          <span>📍 Busca por região</span>
+          <span>📷 Fotos dos serviços</span>
+          <span>🛡️ Contato com conta cadastrada</span>
+        </div>
+      </section>
     </section>
 
     <section id="login" class="screen">
