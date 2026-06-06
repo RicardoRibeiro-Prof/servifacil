@@ -132,19 +132,33 @@ async function resizeImageToBlob(file, maxWidth=1000, quality=.76){
   return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=()=>reject(new Error('Erro ao ler imagem.')); reader.onload=()=>{ const img=new Image(); img.onerror=()=>reject(new Error('Imagem inválida.')); img.onload=()=>{ const scale=Math.min(1,maxWidth/img.width); const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.round(img.width*scale)); canvas.height=Math.max(1,Math.round(img.height*scale)); const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,canvas.width,canvas.height); canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Erro ao comprimir imagem.')), 'image/jpeg', quality); }; img.src=reader.result; }; reader.readAsDataURL(file); });
 }
 async function fileToDataUrl(file){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=reject; reader.onload=()=>resolve(reader.result); reader.readAsDataURL(file); }); }
+async function blobToDataUrl(blob){ return new Promise((resolve,reject)=>{ const reader=new FileReader(); reader.onerror=reject; reader.onload=()=>resolve(reader.result); reader.readAsDataURL(blob); }); }
+async function compressedDataUrl(file){
+  try{
+    const blob = await resizeImageToBlob(file, 900, .70);
+    const dataUrl = await blobToDataUrl(blob);
+    // Firestore tem limite por documento; se a imagem ainda ficar grande, não salva a foto para não travar o cadastro.
+    if(dataUrl.length > 650000) throw new Error('Imagem grande demais para salvar no Firestore.');
+    return dataUrl;
+  }catch(err){
+    console.warn('Foto ignorada para não impedir o cadastro.', err);
+    showToast('A foto ficou grande demais. Vou salvar o perfil sem essa foto.');
+    return '';
+  }
+}
 async function uploadImage(file, path){
   if(storageOnline && currentUser){
     try{
-      const blob = await resizeImageToBlob(file);
+      const blob = await resizeImageToBlob(file, 1000, .76);
       const ref = storage.ref().child(path);
       await ref.put(blob, { contentType:'image/jpeg' });
       return await ref.getDownloadURL();
     }catch(err){
-      console.warn('Falha no upload para Storage. Usando imagem local/Base64 como alternativa.', err);
-      showToast('Não consegui enviar a foto ao Storage. Vou salvar o perfil com foto local para teste.');
+      console.warn('Falha no upload para Storage. Usando imagem comprimida no Firestore como alternativa.', err);
+      showToast('Storage indisponível. Vou tentar salvar a foto comprimida.');
     }
   }
-  return fileToDataUrl(file);
+  return compressedDataUrl(file);
 }
 async function processProviderImages(providerId, existing={}){
   let profileImage = existing.profileImage || '';
@@ -152,7 +166,13 @@ async function processProviderImages(providerId, existing={}){
   if(profileFile) profileImage = await uploadImage(profileFile, `providers/${currentUser?.id || 'local'}/${providerId}/perfil.jpg`);
   let workImages = Array.isArray(existing.workImages) ? [...existing.workImages] : [];
   const files = Array.from($('workImages').files || []).slice(0,3);
-  if(files.length){ workImages = []; for(let i=0;i<files.length;i++) workImages.push(await uploadImage(files[i], `providers/${currentUser?.id || 'local'}/${providerId}/trabalho-${i+1}.jpg`)); }
+  if(files.length){
+    workImages = [];
+    for(let i=0;i<files.length;i++){
+      const url = await uploadImage(files[i], `providers/${currentUser?.id || 'local'}/${providerId}/trabalho-${i+1}.jpg`);
+      if(url) workImages.push(url);
+    }
+  }
   return { profileImage, workImages };
 }
 function firstImage(p){ return p.profileImage || (Array.isArray(p.workImages) && p.workImages[0]) || ''; }
@@ -268,19 +288,45 @@ async function ensureProviderRole(){
 async function saveProvider(event){
   event.preventDefault();
   if(!currentUser){ showToast('Entre na sua conta para cadastrar um serviço.'); showScreen('login'); return; }
+
+  const name = $('name').value.trim();
+  const category = $('category').value;
+  const city = $('city').value.trim();
+  const whatsapp = $('whatsapp').value.trim();
+  const description = $('description').value.trim();
+
+  if(!name || !category || !city || !whatsapp || !description){
+    showToast('Preencha nome, categoria, cidade, WhatsApp e descrição.');
+    return;
+  }
+
   try{
     await ensureProviderRole();
-    const providers=await getProviders(); const editId=$('editingProviderId').value; const old=providers.find(p=>p.id===editId); const id=editId||newId();
+    const providers=await getProviders();
+    const editId=$('editingProviderId').value;
+    const old=providers.find(p=>p.id===editId);
+    const id=editId||newId();
     if(old && !isAdmin() && old.userId!==currentUser.id){ showToast('Você não tem permissão para editar este perfil.'); return; }
-    showToast('Salvando perfil e fotos...');
-    const imgs=await processProviderImages(id, old||{});
-    const item={ id, userId:old?.userId||currentUser.id, name:$('name').value.trim(), category:$('category').value, city:$('city').value.trim(), neighborhood:$('neighborhood').value.trim(), whatsapp:$('whatsapp').value.trim(), price:$('price').value.trim(), description:$('description').value.trim(), photo:$('photo').value.trim(), ...imgs, status:old?.status || (isAdmin()?'aprovado':'pendente'), active:old?.active ?? true, plan:old?.plan || 'gratis', featured:old?.featured || false, rating:old?.rating || null, ratingCount:old?.ratingCount || 0, views:old?.views || 0, createdAt:old?.createdAt || now(), updatedAt:now() };
-    await upsertDoc('providers', item); cancelProviderEdit(false); await refreshAll(); showToast(editId?'Perfil atualizado.':'Cadastro enviado para aprovação.'); showScreen('painel');
+
+    showToast('Salvando perfil...');
+    let imgs={ profileImage: old?.profileImage || '', workImages: old?.workImages || [] };
+    try{ imgs = await processProviderImages(id, old||{}); }
+    catch(imgErr){ console.warn('Falha nas imagens. Salvando perfil sem novas fotos.', imgErr); showToast('Não consegui salvar as fotos, mas vou salvar o perfil.'); }
+
+    const item={ id, userId:old?.userId||currentUser.id, name, category, city, neighborhood:$('neighborhood').value.trim(), whatsapp, price:$('price').value.trim(), description, photo:$('photo').value.trim(), ...imgs, status:old?.status || (isAdmin()?'aprovado':'pendente'), active:old?.active ?? true, plan:old?.plan || 'gratis', featured:old?.featured || false, rating:old?.rating || null, ratingCount:old?.ratingCount || 0, views:old?.views || 0, createdAt:old?.createdAt || now(), updatedAt:now() };
+
+    await upsertDoc('providers', item);
+    cancelProviderEdit(false);
+    await refreshAll();
+    showToast(editId?'Perfil atualizado.':'Cadastro enviado para aprovação.');
+    showScreen('painel');
   }catch(err){
     console.error(err);
-    showToast('Não foi possível salvar. Verifique as regras do Firebase ou tente sem foto.');
+    const msg = err?.code === 'permission-denied' ? 'Firebase bloqueou o cadastro. Confira as regras do Firestore.' : 'Não foi possível salvar. Tente novamente sem foto ou confira o Firebase.';
+    showToast(msg);
   }
 }
+
 async function editProvider(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id){ showToast('Você não tem permissão para editar este perfil.'); return; } $('editingProviderId').value=p.id; $('name').value=p.name||''; $('category').value=p.category||''; $('city').value=p.city||''; $('neighborhood').value=p.neighborhood||''; $('whatsapp').value=p.whatsapp||''; $('price').value=p.price||''; $('description').value=p.description||''; $('photo').value=p.photo||''; $('providerSubmitButton').textContent='Salvar alterações'; $('cancelEditProvider').classList.remove('hidden'); updateImagePreview(); showScreen('cadastro'); }
 function cancelProviderEdit(toast=true){ $('providerForm').reset(); $('editingProviderId').value=''; $('providerSubmitButton').textContent='Cadastrar serviço'; $('cancelEditProvider').classList.add('hidden'); updateImagePreview(); if(toast) showToast('Edição cancelada.'); }
 async function toggleProviderActive(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id) return showToast('Sem permissão.'); await upsertDoc('providers',{...p,active:p.active===false}); await refreshAll(); showToast(p.active===false?'Perfil ativado.':'Perfil pausado.'); }
