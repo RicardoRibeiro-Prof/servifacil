@@ -12,43 +12,48 @@
   <header class="topbar">
     <div>
       <h1>ServiFácil</h1>
-      <p>Marketplace de serviços locais</p>
+      <p>Marketplace profissional de serviços locais</p>
     </div>
     <div class="top-actions">
-      <span id="userBadge" class="user-badge hidden"></span>
+      <span id="userBadge" class="pill hidden"></span>
       <button id="btnInstall" class="install-btn hidden">Instalar</button>
-      <span id="dataModeBadge" class="user-badge">Local</span>
-      <button id="btnLogout" class="ghost hidden" onclick="logout()">Sair</button>
+      <span id="dataModeBadge" class="pill">Carregando...</span>
+      <button id="btnLogout" class="ghost hidden">Sair</button>
     </div>
   </header>
 
   <main>
     <section class="hero">
-      <h2>Encontre profissionais perto de você</h2>
-      <p>Busque por categoria, veja perfis, solicite orçamento e chame direto no WhatsApp.</p>
-      <div class="hero-actions">
-        <button onclick="showScreen('buscar')">Buscar serviço</button>
-        <button class="secondary" onclick="showScreen('cadastro')">Oferecer meus serviços</button>
-        <button class="outline" onclick="showScreen('login')">Entrar / Criar conta</button>
+      <div>
+        <span class="eyebrow">Serviços locais com gestão profissional</span>
+        <h2>Encontre profissionais perto de você</h2>
+        <p>Busque por categoria, cidade, bairro, avaliação ou plano. Solicite orçamento e fale direto pelo WhatsApp.</p>
+        <div class="hero-actions">
+          <button data-go="buscar">Buscar serviço</button>
+          <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
+          <button class="outline" data-go="login">Entrar / Criar conta</button>
+        </div>
+      </div>
+      <div class="hero-card">
+        <strong>Versão 7 Profissional</strong>
+        <span>Firebase Auth + Firestore + Storage</span>
+        <span>Login seguro e upload real de fotos</span>
       </div>
     </section>
 
     <nav class="tabs">
-      <button class="active" data-screen="inicio" onclick="showScreen('inicio')">Início</button>
-      <button data-screen="buscar" onclick="showScreen('buscar')">Buscar</button>
-      <button data-screen="cadastro" onclick="showScreen('cadastro')">Cadastrar</button>
-      <button data-screen="solicitacoes" onclick="showScreen('solicitacoes')">Pedidos</button>
-      <button data-screen="painel" onclick="showScreen('painel')">Meu painel</button>
-      <button data-screen="admin" onclick="showScreen('admin')">Admin</button>
+      <button class="active" data-screen="inicio">Início</button>
+      <button data-screen="buscar">Buscar</button>
+      <button data-screen="cadastro">Cadastrar</button>
+      <button data-screen="solicitacoes">Pedidos</button>
+      <button data-screen="painel">Meu painel</button>
+      <button data-screen="admin">Admin</button>
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <div class="notice">
-        <strong>Versão 5 implementada:</strong> filtros avançados, planos de destaque, contador de visualizações, avaliações dos clientes e solicitações com urgência/data desejada.
-      </div>
+      <div class="notice"><strong>Versão 7 implementada:</strong> login profissional com Firebase Authentication, fotos no Firebase Storage, regras de segurança sugeridas, painel mais limpo e dados sem senha salva no Firestore.</div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
-
       <h3>Profissionais em destaque</h3>
       <div id="featuredList" class="cards"></div>
     </section>
@@ -56,28 +61,28 @@
     <section id="login" class="screen">
       <h3>Entrar ou criar conta</h3>
       <div class="split-grid">
-        <form id="loginForm" class="form-card">
+        <form id="loginForm" class="form-card" autocomplete="off">
           <h4>Entrar</h4>
           <label>E-mail
-            <input required id="loginEmail" type="email" placeholder="seuemail@email.com" />
+            <input required id="loginEmail" type="email" placeholder="seuemail@email.com" autocomplete="username" autocapitalize="none" spellcheck="false" />
           </label>
           <label>Senha
-            <input required id="loginPassword" type="password" placeholder="Digite sua senha" />
+            <input required id="loginPassword" type="password" placeholder="Digite sua senha" autocomplete="current-password" />
           </label>
           <button type="submit">Entrar</button>
-          <p class="muted small">Admin de teste: admin@servifacil.com / 123456</p>
+          <p class="muted small">Admin de teste: admin@servifacil.com / 123456. Depois altere essa senha no Firebase Authentication.</p>
         </form>
 
-        <form id="accountForm" class="form-card">
+        <form id="accountForm" class="form-card" autocomplete="off">
           <h4>Criar conta</h4>
           <label>Nome
-            <input required id="accountName" placeholder="Seu nome" />
+            <input required id="accountName" placeholder="Seu nome" autocomplete="name" />
           </label>
           <label>E-mail
-            <input required id="accountEmail" type="email" placeholder="seuemail@email.com" />
+            <input required id="accountEmail" type="email" placeholder="seuemail@email.com" autocomplete="email" autocapitalize="none" spellcheck="false" />
           </label>
           <label>Senha
-            <input required id="accountPassword" type="password" minlength="4" placeholder="Mínimo 4 caracteres" />
+            <input required id="accountPassword" type="password" minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
           </label>
           <label>Tipo de conta
             <select required id="accountType">
@@ -92,85 +97,78 @@
 
     <section id="buscar" class="screen">
       <h3>Buscar profissionais</h3>
-      <div class="filters filters-v5">
-        <input id="searchText" type="search" placeholder="Digite serviço, nome ou descrição" oninput="renderProfessionals()" />
-        <input id="cityFilter" type="search" placeholder="Filtrar por cidade ou bairro" oninput="renderProfessionals()" />
-        <select id="categoryFilter" onchange="renderProfessionals()"></select>
-        <select id="planFilter" onchange="renderProfessionals()">
+      <div class="filters">
+        <input id="searchText" type="search" placeholder="Serviço, nome ou descrição" />
+        <input id="cityFilter" type="search" placeholder="Cidade ou bairro" />
+        <select id="categoryFilter"></select>
+        <select id="planFilter">
           <option value="">Todos os planos</option>
           <option value="premium">Premium</option>
           <option value="destaque">Destaque</option>
           <option value="gratis">Grátis</option>
         </select>
-        <select id="sortFilter" onchange="renderProfessionals()">
+        <select id="sortFilter">
           <option value="featured">Destaques primeiro</option>
           <option value="rating">Melhor avaliação</option>
           <option value="views">Mais visualizados</option>
           <option value="newest">Mais recentes</option>
         </select>
-        <button class="outline" onclick="clearFilters()">Limpar filtros</button>
+        <button class="outline" id="clearFilters">Limpar</button>
       </div>
       <div id="professionalList" class="cards"></div>
     </section>
 
     <section id="cadastro" class="screen">
-      <h3>Cadastrar prestador de serviço</h3>
-      <div class="notice">Cadastros novos ficam como <strong>pendentes</strong>. O administrador pode aprovar no painel Admin.</div>
+      <h3>Cadastrar ou editar prestador</h3>
+      <div class="notice">Cadastros novos ficam como <strong>pendentes</strong>. O administrador aprova no painel Admin.</div>
       <form id="providerForm" class="form-card">
         <input type="hidden" id="editingProviderId" />
         <label>Nome do profissional ou empresa
           <input required id="name" placeholder="Ex: João Silva" />
         </label>
-
         <label>Categoria
           <select required id="category"></select>
         </label>
-
-        <label>Cidade
-          <input required id="city" placeholder="Ex: São Raimundo Nonato - PI" />
-        </label>
-
-        <label>Bairro
-          <input id="neighborhood" placeholder="Ex: Centro" />
-        </label>
-
-        <label>WhatsApp
-          <input required id="whatsapp" placeholder="Ex: 5589999999999" />
-        </label>
-
-        <label>Preço inicial
-          <input id="price" placeholder="Ex: A partir de R$ 50,00" />
-        </label>
-
+        <div class="form-row">
+          <label>Cidade
+            <input required id="city" placeholder="Ex: São Raimundo Nonato - PI" />
+          </label>
+          <label>Bairro
+            <input id="neighborhood" placeholder="Ex: Centro" />
+          </label>
+        </div>
+        <div class="form-row">
+          <label>WhatsApp
+            <input required id="whatsapp" placeholder="Ex: 5589999999999" inputmode="numeric" />
+          </label>
+          <label>Preço inicial
+            <input id="price" placeholder="Ex: A partir de R$ 50,00" />
+          </label>
+        </div>
         <label>Descrição dos serviços
           <textarea required id="description" rows="5" placeholder="Explique o que você faz, sua experiência e os tipos de serviço que atende."></textarea>
         </label>
-
         <label>Foto principal do perfil
           <input id="profileImage" type="file" accept="image/*" />
-          <small class="muted">Use uma foto do profissional, logomarca ou imagem do serviço. Se editar e não escolher nova foto, a foto atual será mantida.</small>
+          <small class="muted">Na versão profissional, a foto vai para o Firebase Storage quando ele estiver ativado.</small>
         </label>
-
         <label>Fotos de trabalhos realizados
           <input id="workImages" type="file" accept="image/*" multiple />
-          <small class="muted">Você pode selecionar até 3 fotos. Para economizar espaço, as imagens serão reduzidas automaticamente.</small>
+          <small class="muted">Selecione até 3 fotos.</small>
         </label>
-
         <div id="imagePreview" class="image-preview muted">Nenhuma nova foto selecionada.</div>
-
         <label>Link externo opcional: Instagram, portfólio ou site
           <input id="photo" placeholder="Cole uma URL, se tiver" />
         </label>
-
         <div class="row-actions">
           <button id="providerSubmitButton" type="submit">Cadastrar serviço</button>
-          <button id="cancelEditProvider" type="button" class="outline hidden" onclick="cancelProviderEdit()">Cancelar edição</button>
+          <button id="cancelEditProvider" type="button" class="outline hidden">Cancelar edição</button>
         </div>
       </form>
     </section>
 
     <section id="perfil" class="screen">
-      <button class="back" onclick="showScreen('buscar')">← Voltar</button>
+      <button class="back" data-go="buscar">← Voltar</button>
       <div id="profileBox"></div>
     </section>
 
@@ -187,28 +185,29 @@
           <input required id="requestClientName" placeholder="Seu nome" />
         </label>
         <label>WhatsApp do cliente
-          <input required id="requestPhone" placeholder="Ex: 5589999999999" />
+          <input required id="requestPhone" placeholder="Ex: 5589999999999" inputmode="numeric" />
         </label>
         <label>Cidade/Bairro
           <input required id="requestLocation" placeholder="Ex: Centro, São Raimundo Nonato - PI" />
         </label>
-        <label>Data desejada
-          <input id="requestDate" type="date" />
-        </label>
-        <label>Urgência
-          <select id="requestUrgency">
-            <option value="Normal">Normal</option>
-            <option value="Urgente">Urgente</option>
-            <option value="Esta semana">Esta semana</option>
-            <option value="Sem pressa">Sem pressa</option>
-          </select>
-        </label>
+        <div class="form-row">
+          <label>Data desejada
+            <input id="requestDate" type="date" />
+          </label>
+          <label>Urgência
+            <select id="requestUrgency">
+              <option value="Normal">Normal</option>
+              <option value="Urgente">Urgente</option>
+              <option value="Esta semana">Esta semana</option>
+              <option value="Sem pressa">Sem pressa</option>
+            </select>
+          </label>
+        </div>
         <label>Descreva o que precisa
           <textarea required id="requestDescription" rows="5" placeholder="Ex: preciso trocar uma tomada, instalar chuveiro, criar uma arte..."></textarea>
         </label>
         <button type="submit">Enviar solicitação</button>
       </form>
-
       <h3>Últimas solicitações</h3>
       <div id="requestList" class="cards"></div>
     </section>
@@ -226,14 +225,11 @@
         <div><strong id="totalRequests">0</strong><span>Solicitações</span></div>
         <div><strong id="totalFeatured">0</strong><span>Destaques</span></div>
       </div>
-
       <div class="admin-actions">
-        <button onclick="exportData()">Exportar prestadores</button>
-        <button onclick="exportRequests()" class="secondary">Exportar solicitações</button>
-        <button onclick="exportReviews()" class="outline">Exportar avaliações</button>
-        <button class="danger" onclick="clearAllData()">Limpar dados</button>
+        <button id="exportProviders">Exportar prestadores</button>
+        <button id="exportRequests" class="secondary">Exportar solicitações</button>
+        <button id="exportReviews" class="outline">Exportar avaliações</button>
       </div>
-
       <h4>Prestadores cadastrados</h4>
       <div id="adminList" class="cards"></div>
     </section>
@@ -242,7 +238,9 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
