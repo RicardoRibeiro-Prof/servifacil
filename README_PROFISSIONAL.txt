@@ -141,3 +141,6 @@ V9.2 MOBILE FIRST
 - Cards mais compactos para tela pequena.
 - Categorias com rolagem horizontal.
 - Formulários e botões ajustados para toque.
+
+
+V9.3: correção mobile para cards sem foto não ficarem espremidos.

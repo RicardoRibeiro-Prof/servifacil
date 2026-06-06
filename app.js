@@ -216,7 +216,7 @@ function providerMetaLine(p, admin=false, owner=false){
 function providerCard(p, admin=false, owner=false){
   const thumb=firstImage(p);
   return `<article class="pro-card ${p.active===false?'is-paused':''}">
-    <div class="pro-card-main">
+    <div class="pro-card-main ${thumb?'has-thumb':'no-thumb'}">
       ${thumb?`<div class="card-thumb">${imageTag(thumb,p.name)}</div>`:''}
       <div class="pro-card-content">
         <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>

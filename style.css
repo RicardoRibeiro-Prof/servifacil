@@ -406,3 +406,25 @@ button, .tabs button, input, select, textarea{
   .card-thumb{width:74px;height:74px;}
   .tabs button{font-size:11px;}
 }
+
+/* Correção: cards sem foto não podem ficar espremidos no celular */
+.pro-card-main.no-thumb{
+  display:block;
+}
+.pro-card-main.no-thumb .pro-card-content{
+  width:100%;
+}
+.pro-card-main.no-thumb .profile-actions{
+  grid-column:auto;
+}
+@media(max-width:620px){
+  .pro-card-main.no-thumb{
+    display:block!important;
+  }
+  .pro-card-main.no-thumb .pro-header p{
+    max-width:100%;
+  }
+  .pro-card-main.no-thumb .service-desc{
+    -webkit-line-clamp:3;
+  }
+}
