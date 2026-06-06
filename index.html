@@ -17,7 +17,7 @@
     <div class="top-actions">
       <span id="userBadge" class="pill hidden"></span>
       <button id="btnInstall" class="install-btn hidden">Instalar</button>
-      <span id="dataModeBadge" class="pill">Carregando...</span>
+      <span id="dataModeBadge" class="pill hidden">Carregando...</span>
       <button id="btnLogout" class="ghost hidden">Sair</button>
     </div>
   </header>
@@ -27,31 +27,30 @@
       <div>
         <span class="eyebrow">Serviços locais com gestão profissional</span>
         <h2>Encontre profissionais perto de você</h2>
-        <p>Busque por categoria, cidade, bairro, avaliação ou plano. Solicite orçamento e fale direto pelo WhatsApp.</p>
+        <p>Busque por categoria, cidade, bairro e avaliação. Solicite orçamento e fale direto pelo WhatsApp.</p>
         <div class="hero-actions">
           <button data-go="buscar">Buscar serviço</button>
           <button class="secondary" data-go="cadastro">Oferecer meus serviços</button>
-          <button class="outline" data-go="login">Entrar / Criar conta</button>
+          <button id="heroLoginButton" class="outline" data-go="login">Entrar / Criar conta</button>
         </div>
       </div>
-      <div class="hero-card">
-        <strong>Versão 7 Profissional</strong>
-        <span>Firebase Auth + Firestore + Storage</span>
-        <span>Login seguro e upload real de fotos</span>
+      <div class="hero-card clean-card">
+        <strong>Encontre, compare e solicite orçamento</strong>
+        <span>Profissionais locais organizados por categoria</span>
+        <span>Contato rápido pelo WhatsApp</span>
       </div>
     </section>
 
     <nav class="tabs">
       <button class="active" data-screen="inicio">Início</button>
       <button data-screen="buscar">Buscar</button>
-      <button data-screen="cadastro">Cadastrar</button>
       <button data-screen="solicitacoes">Pedidos</button>
-      <button data-screen="painel">Meu painel</button>
-      <button data-screen="admin">Admin</button>
+      <button id="accountTabButton" data-screen="painel">Minha conta</button>
+      <button id="adminTabButton" class="hidden" data-screen="admin">Admin</button>
     </nav>
 
     <section id="inicio" class="screen active-screen">
-      <div class="notice"><strong>Versão 7 implementada:</strong> login profissional com Firebase Authentication, fotos no Firebase Storage, regras de segurança sugeridas, painel mais limpo e dados sem senha salva no Firestore.</div>
+      <div class="notice"><strong>ServiFácil:</strong> busque profissionais, solicite orçamento e acompanhe seus pedidos em um só lugar.</div>
       <h3>Categorias populares</h3>
       <div id="categoryGrid" class="category-grid"></div>
       <h3>Profissionais em destaque</h3>
@@ -70,7 +69,7 @@
             <input required id="loginPassword" type="password" placeholder="Digite sua senha" autocomplete="current-password" />
           </label>
           <button type="submit">Entrar</button>
-          <p class="muted small">Admin de teste: admin@servifacil.com / 123456. Depois altere essa senha no Firebase Authentication.</p>
+          <p class="muted small">Use seu e-mail e senha para entrar. Se ainda não tiver conta, crie ao lado.</p>
         </form>
 
         <form id="accountForm" class="form-card" autocomplete="off">
@@ -101,7 +100,7 @@
         <input id="searchText" type="search" placeholder="Serviço, nome ou descrição" />
         <input id="cityFilter" type="search" placeholder="Cidade ou bairro" />
         <select id="categoryFilter"></select>
-        <select id="planFilter">
+        <select id="planFilter" class="hidden">
           <option value="">Todos os planos</option>
           <option value="premium">Premium</option>
           <option value="destaque">Destaque</option>
@@ -119,8 +118,8 @@
     </section>
 
     <section id="cadastro" class="screen">
-      <h3>Cadastrar ou editar prestador</h3>
-      <div class="notice">Cadastros novos ficam como <strong>pendentes</strong>. O administrador aprova no painel Admin.</div>
+      <h3>Oferecer meus serviços</h3>
+      <div class="notice">Preencha seu perfil profissional. Após o envio, seu cadastro ficará pendente até a aprovação.</div>
       <form id="providerForm" class="form-card">
         <input type="hidden" id="editingProviderId" />
         <label>Nome do profissional ou empresa
@@ -141,8 +140,8 @@
           <label>WhatsApp
             <input required id="whatsapp" placeholder="Ex: 5589999999999" inputmode="numeric" />
           </label>
-          <label>Preço inicial
-            <input id="price" placeholder="Ex: A partir de R$ 50,00" />
+          <label>Preço inicial <span class="muted">(opcional)</span>
+            <input id="price" placeholder="Ex: A partir de R$ 50,00 ou deixe em branco para sob orçamento" />
           </label>
         </div>
         <label>Descrição dos serviços
