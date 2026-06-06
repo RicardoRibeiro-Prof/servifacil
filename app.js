@@ -43,6 +43,21 @@ const planConfig = {
 
 const planOrder = ['gratis', 'destaque', 'premium'];
 
+const requestStatuses = ['Novo', 'Em análise', 'Orçamento enviado', 'Aceito', 'Concluído', 'Cancelado'];
+
+function requestStatusClass(status){
+  const s = String(status || 'Novo').toLowerCase();
+  if(s.includes('concl')) return 'done';
+  if(s.includes('cancel')) return 'cancelled';
+  if(s.includes('aceito')) return 'accepted';
+  if(s.includes('orçamento')) return 'quoted';
+  if(s.includes('análise')) return 'analysis';
+  return 'new';
+}
+function requestStatusOptions(current){
+  return requestStatuses.map(s => `<option value="${s}" ${String(current||'Novo')===s?'selected':''}>${s}</option>`).join('');
+}
+
 const sampleProviders = [
   { id:'sample-provider-1', userId:null, name:'João Silva', category:'construcao', city:'São Raimundo Nonato - PI', neighborhood:'Centro', whatsapp:'5589999999999', price:'A partir de R$ 50,00', description:'Eletricista residencial. Faço instalação de tomadas, troca de chuveiro, manutenção em disjuntores e instalação de iluminação.', rating:4.8, ratingCount:12, views:0, plan:'destaque', featured:true, status:'aprovado', active:true, workImages:[], createdAt:new Date().toISOString() },
   { id:'sample-provider-2', userId:null, name:'Maria Designer', category:'tecnologia', city:'São Raimundo Nonato - PI', neighborhood:'Centro', whatsapp:'5589999999999', price:'Artes a partir de R$ 30,00', description:'Criação de artes para Instagram, cartões digitais, logotipos simples e materiais para divulgação.', rating:4.9, ratingCount:8, views:0, plan:'premium', featured:true, status:'aprovado', active:true, workImages:[], createdAt:new Date().toISOString() }
@@ -286,6 +301,7 @@ function providerBadges(p, admin=false, owner=false){
     badges.push(`<span class="badge ${planClass(p.plan)}">Plano ${planLabel(p.plan)}</span>`);
     badges.push(`<span class="badge ${statusClass(status)}">${statusLabel(status)}</span>`);
   }
+  if(p.verified) badges.push('<span class="badge approved">Verificado</span>');
   if(admin && p.planRequest && p.planRequest !== p.plan) badges.push(`<span class="badge pending">Solicitou ${planLabel(p.planRequest)}</span>`);
   if((admin || owner) && p.active===false) badges.push('<span class="badge pending">Pausado</span>');
   return badges.join('');
@@ -347,13 +363,13 @@ function providerCard(p, admin=false, owner=false){
         <div class="pro-header"><div><strong>${safeText(p.name)}</strong><p class="muted">${categoryName(p.category)} • ${safeText(p.city)}${p.neighborhood?' • '+safeText(p.neighborhood):''}</p></div><div class="badges">${providerBadges(p,admin,owner)}</div></div>
         <p class="service-desc">${safeText(p.description)}</p>
         <p><span class="rating">${providerMetaLine(p,admin,owner)}</span></p>
-        <div class="profile-actions"><button data-profile="${p.id}">Ver detalhes</button>${hasProviderPhotos(p)?`<button class="outline" data-view-photos="${p.id}">Ver fotos</button>`:'' }${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
+        <div class="profile-actions"><button data-profile="${p.id}">Ver detalhes</button>${hasProviderPhotos(p)?`<button class="outline" data-view-photos="${p.id}">Ver fotos</button>`:'' }${currentUser && isClientUser() && !admin && !owner ? `<button class="outline" data-favorite-provider="${p.id}">${localGet('favoriteProviders', []).includes(p.id)?'Favorito':'Favoritar'}</button>` : ''}${owner?ownerButtons(p):''}${admin?adminButtons(p):''}</div>
       </div>
     </div>
   </article>`;
 }
 function ownerButtons(p){ return `<button class="secondary" data-edit="${p.id}">Editar perfil</button><button class="outline" data-toggle-active="${p.id}">${p.active===false?'Ativar perfil':'Pausar perfil'}</button>`; }
-function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-plan="${p.id}|gratis">Definir grátis</button><button class="secondary" data-plan="${p.id}|destaque">Definir destaque</button><button class="success" data-plan="${p.id}|premium">Definir premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
+function adminButtons(p){ return `${p.status!=='aprovado'?`<button class="success" data-status="${p.id}|aprovado">Aprovar</button>`:''}${p.status!=='bloqueado'?`<button class="danger" data-status="${p.id}|bloqueado">Bloquear</button>`:''}<button class="outline" data-verify-provider="${p.id}">${p.verified?'Remover verificado':'Marcar verificado'}</button><button class="outline" data-plan="${p.id}|gratis">Definir grátis</button><button class="secondary" data-plan="${p.id}|destaque">Definir destaque</button><button class="success" data-plan="${p.id}|premium">Definir premium</button><button class="danger" data-delete-provider="${p.id}">Excluir</button>`; }
 async function renderFeatured(){
   if(isProviderUser()){
     const mine=(await getProviders()).filter(p=>p.userId===currentUser.id);
@@ -582,6 +598,7 @@ function cancelProviderEdit(toast=true){ $('providerForm').reset(); $('editingPr
 async function toggleProviderActive(id){ const p=(await getProviders()).find(x=>x.id===id); if(!p) return; if(!isAdmin() && p.userId!==currentUser?.id) return showToast('Sem permissão.'); await upsertDoc('providers',{...p,active:p.active===false}); await refreshAll(); showToast(p.active===false?'Perfil ativado.':'Perfil pausado.'); }
 async function updateProviderStatus(id,status){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,status}); await refreshAll(); showToast(`Prestador ${statusLabel(status).toLowerCase()}.`); }
 async function updateProviderPlan(id,plan){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,plan,featured:plan==='destaque'||plan==='premium'}); await refreshAll(); showToast('Plano atualizado para ' + planFullName(plan) + '.'); }
+async function toggleProviderVerified(id){ if(!isAdmin()) return showToast('Acesso negado.'); const p=(await getProviders()).find(x=>x.id===id); if(!p) return; await upsertDoc('providers',{...p,verified:!p.verified,updatedAt:now()}); await refreshAll(); showToast(p.verified?'Selo verificado removido.':'Prestador marcado como verificado.'); }
 async function deleteProvider(id){ if(!isAdmin()) return showToast('Acesso negado.'); if(!confirm('Excluir este prestador?')) return; await deleteDoc('providers',id); await refreshAll(); showToast('Prestador excluído.'); }
 
 async function renderRequestProviderOptions(){ const providers=await approvedProviders(); $('requestProvider').innerHTML='<option value="">Todos da categoria</option>'+providers.map(p=>`<option value="${p.id}">${safeText(p.name)} - ${safeText(p.city)}</option>`).join(''); }
@@ -609,17 +626,103 @@ async function renderRequests(){
   if(isClientUser()) list=list.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase());
   $('requestList').innerHTML=list.length?list.slice(0,10).map(r=>requestCard(r)).join(''):'<p class="empty-card muted">Nenhuma solicitação cadastrada ainda.</p>';
 }
-function requestCard(r, actions=false){ const phone=String(r.phone||'').replace(/\D/g,''); const msg=encodeURIComponent(`Olá ${r.clientName}, vi sua solicitação no ServiFácil sobre ${categoryName(r.category)}. Posso te passar um orçamento.`); return `<article class="request-card"><strong>${categoryName(r.category)}</strong><div class="request-meta"><span>${safeText(r.location)}</span><span>${safeText(r.status)}</span>${r.urgency?`<span>${safeText(r.urgency)}</span>`:''}${r.desiredDate?`<span>Data: ${new Date(r.desiredDate+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}${r.providerName?`<span>Para: ${safeText(r.providerName)}</span>`:'<span>Para todos da categoria</span>'}</div><p>${safeText(r.description)}</p><p class="muted">Cliente: ${safeText(r.clientName)} • ${new Date(r.createdAt).toLocaleDateString('pt-BR')}</p>${actions?`<div class="row-actions"><a href="https://wa.me/${phone}?text=${msg}" target="_blank"><button class="whatsapp">Responder no WhatsApp</button></a><button data-done-request="${r.id}">Marcar atendido</button></div>`:''}</article>`; }
-async function markRequestDone(id){ const r=(await getRequests()).find(x=>x.id===id); if(!r) return; await upsertDoc('requests',{...r,status:'Atendido'}); await renderDashboard(); await renderRequests(); showToast('Solicitação marcada como atendida.'); }
+function requestCard(r, actions=false){
+  const phone=String(r.phone||'').replace(/\D/g,'');
+  const msg=encodeURIComponent(`Olá ${r.clientName}, vi sua solicitação no ServiFácil sobre ${categoryName(r.category)}. Posso te passar um orçamento.`);
+  const status = r.status || 'Novo';
+  const providerActions = actions ? `<div class="request-actions">
+    <a href="https://wa.me/${phone}?text=${msg}" target="_blank"><button class="whatsapp">Responder no WhatsApp</button></a>
+    <label class="status-control">Status
+      <select data-request-status="${r.id}">
+        ${requestStatusOptions(status)}
+      </select>
+    </label>
+  </div>` : '';
+  return `<article class="request-card status-${requestStatusClass(status)}">
+    <div class="request-title-row">
+      <strong>${categoryName(r.category)}</strong>
+      <span class="request-status-pill">${safeText(status)}</span>
+    </div>
+    <div class="request-meta">
+      <span>${safeText(r.location)}</span>
+      ${r.urgency?`<span>${safeText(r.urgency)}</span>`:''}
+      ${r.desiredDate?`<span>Data: ${new Date(r.desiredDate+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}
+      ${r.providerName?`<span>Para: ${safeText(r.providerName)}</span>`:'<span>Para todos da categoria</span>'}
+    </div>
+    <p>${safeText(r.description)}</p>
+    <p class="muted">Cliente: ${safeText(r.clientName)} • ${new Date(r.createdAt).toLocaleDateString('pt-BR')}</p>
+    ${providerActions}
+  </article>`;
+}
+async function updateRequestStatus(id,status){
+  const r=(await getRequests()).find(x=>x.id===id);
+  if(!r) return;
+  await upsertDoc('requests',{...r,status,updatedAt:now()});
+  await renderDashboard();
+  await renderRequests();
+  showToast('Status atualizado.');
+}
+async function markRequestDone(id){ await updateRequestStatus(id, 'Concluído'); }
 function startRequestForProvider(id){ if(!requireClientAccount()) return; $('requestProvider').value=id; showScreen('solicitacoes'); setTimeout(()=>$('requestProvider').value=id,100); }
 
 async function renderDashboard(){
-  if(!currentUser){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Entre ou crie uma conta para acessar seu painel.</p><button data-go="login">Entrar agora</button></div>'; return; }
-  if(isAdmin()){ $('dashboardBox').innerHTML='<div class="empty-card"><p>Você está como administrador.</p><button data-go="admin">Abrir painel administrativo</button></div>'; return; }
+  if(!currentUser){
+    $('dashboardBox').innerHTML='<div class="empty-card"><p>Entre ou crie uma conta para acessar seu painel.</p><button data-go="login">Entrar agora</button></div>';
+    return;
+  }
+
+  if(isAdmin()){
+    $('dashboardBox').innerHTML='<div class="empty-card"><h4>Painel administrativo</h4><p class="muted">Gerencie prestadores, aprovações, planos e solicitações.</p><button data-go="admin">Abrir painel administrativo</button></div>';
+    return;
+  }
+
   const requests=await getRequests(), providers=await getProviders();
-  if(currentUser.role==='cliente'||currentUser.type==='cliente'){ const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase()); $('dashboardBox').innerHTML=`<div class="empty-card"><h4>Minha conta</h4><p class="muted">Acompanhe seus pedidos e seus dados.</p><div class="action-row"><button data-go="solicitacoes">Nova solicitação</button><button class="secondary" data-go="cadastro">Oferecer meus serviços</button></div><h4>Minhas solicitações</h4>${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="muted">Você ainda não fez solicitações.</p>'}</div>`; return; }
-  const myProviders=providers.filter(p=>p.userId===currentUser.id); const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category); const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
-  $('dashboardBox').innerHTML=myProviders.length?`<div class="stats"><div><strong>${myProviders.length}</strong><span>Perfis</span></div><div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div><div><strong>${myProviders.filter(p=>p.status==='aprovado').length}</strong><span>Aprovados</span></div><div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div></div><h4>Meu plano</h4><div class="plan-status-card"><strong>${planFullName(myProviders[0]?.plan || 'gratis')}</strong><span>${planPrice(myProviders[0]?.plan || 'gratis')}</span><p>${planSummary(myProviders[0]?.plan || 'gratis')}</p>${myProviders[0]?.planRequest?`<p class="muted small">Solicitação enviada: ${planFullName(myProviders[0].planRequest)}</p>`:''}<button class="outline" data-go="planos">Ver planos e benefícios</button></div><h4>Meus perfis</h4><div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div><h4>Pedidos para mim</h4><div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
+
+  if(isClientUser()){
+    const mine=requests.filter(r=>r.clientUserId===currentUser.id || String(r.clientName).toLowerCase()===String(currentUser.name).toLowerCase());
+    const favs = localGet('favoriteProviders', []).filter(Boolean);
+    const favProviders = providers.filter(p=>favs.includes(p.id));
+    $('dashboardBox').innerHTML=`<div class="dashboard-section">
+      <div class="panel-head">
+        <div><h4>Minha conta</h4><p class="muted">Acompanhe seus pedidos, favoritos e dados de cliente.</p></div>
+        <button data-go="solicitacoes">Novo pedido</button>
+      </div>
+      <div class="stats">
+        <div><strong>${mine.length}</strong><span>Pedidos</span></div>
+        <div><strong>${mine.filter(r=>String(r.status||'Novo')==='Concluído').length}</strong><span>Concluídos</span></div>
+        <div><strong>${favProviders.length}</strong><span>Favoritos</span></div>
+      </div>
+      <h4>Meus pedidos</h4>
+      <div class="cards">${mine.length?mine.map(r=>requestCard(r)).join(''):'<p class="empty-card muted">Você ainda não fez solicitações.</p>'}</div>
+      <h4>Profissionais favoritos</h4>
+      <div class="cards">${favProviders.length?favProviders.map(p=>providerCard(p)).join(''):'<p class="empty-card muted">Você ainda não salvou favoritos.</p>'}</div>
+    </div>`;
+    return;
+  }
+
+  const myProviders=providers.filter(p=>p.userId===currentUser.id);
+  const myIds=myProviders.map(p=>p.id), myCats=myProviders.map(p=>p.category);
+  const myReq=requests.filter(r=>myIds.includes(r.providerId)||(!r.providerId&&myCats.includes(r.category)));
+  const openReq=myReq.filter(r=>!['Concluído','Cancelado'].includes(String(r.status||'Novo')));
+
+  $('dashboardBox').innerHTML=myProviders.length?`<div class="dashboard-section">
+    <div class="panel-head">
+      <div><h4>Painel do prestador</h4><p class="muted">Gerencie seu perfil, plano e pedidos recebidos.</p></div>
+      <button class="secondary" data-go="cadastro">Editar/cadastrar serviço</button>
+    </div>
+    <div class="stats">
+      <div><strong>${myProviders.length}</strong><span>Perfis</span></div>
+      <div><strong>${myReq.length}</strong><span>Pedidos recebidos</span></div>
+      <div><strong>${openReq.length}</strong><span>Em andamento</span></div>
+      <div><strong>${myProviders.reduce((s,p)=>s+Number(p.views||0),0)}</strong><span>Visualizações</span></div>
+    </div>
+    <h4>Meu plano</h4>
+    <div class="plan-status-card"><strong>${planFullName(myProviders[0]?.plan || 'gratis')}</strong><span>${planPrice(myProviders[0]?.plan || 'gratis')}</span><p>${planSummary(myProviders[0]?.plan || 'gratis')}</p>${myProviders[0]?.planRequest?`<p class="muted small">Solicitação enviada: ${planFullName(myProviders[0].planRequest)}</p>`:''}<button class="outline" data-go="planos">Ver planos e benefícios</button></div>
+    <h4>Meu perfil profissional</h4>
+    <div class="cards">${myProviders.map(p=>providerCard(p,false,true)).join('')}</div>
+    <h4>Pedidos recebidos</h4>
+    <div class="cards">${myReq.length?myReq.map(r=>requestCard(r,true)).join(''):'<p class="empty-card muted">Nenhum pedido recebido ainda.</p>'}</div>
+  </div>`:'<div class="empty-card"><p>Você ainda não cadastrou seu perfil profissional.</p><button data-go="cadastro">Oferecer meus serviços</button></div>';
 }
 
 function renderPlanCards(){
@@ -706,6 +809,26 @@ async function choosePlanFromStaticPage(plan){
   showToast('Entre ou crie uma conta de prestador para escolher este plano.');
 }
 
+
+async function toggleFavoriteProvider(id){
+  if(!currentUser || !isClientUser()){
+    showToast('Entre como cliente para favoritar profissionais.');
+    showScreen(currentUser ? 'painel' : 'login');
+    return;
+  }
+  const favs = localGet('favoriteProviders', []);
+  const idx = favs.indexOf(id);
+  if(idx >= 0){
+    favs.splice(idx, 1);
+    showToast('Removido dos favoritos.');
+  }else{
+    favs.push(id);
+    showToast('Adicionado aos favoritos.');
+  }
+  localSet('favoriteProviders', favs);
+  await refreshAll();
+}
+
 function bindEvents(){
   document.body.addEventListener('click', async e=>{
     const go=e.target.closest('[data-go]')?.dataset.go; if(go){ showScreen(go); return; }
@@ -718,6 +841,10 @@ function bindEvents(){
     const edit=e.target.closest('[data-edit]')?.dataset.edit; if(edit){ await editProvider(edit); return; }
     const active=e.target.closest('[data-toggle-active]')?.dataset.toggleActive; if(active){ await toggleProviderActive(active); return; }
     const status=e.target.closest('[data-status]')?.dataset.status; if(status){ const [id,s]=status.split('|'); await updateProviderStatus(id,s); return; }
+    const reqStatus=e.target.closest('[data-request-status]');
+    if(reqStatus){ await updateRequestStatus(reqStatus.dataset.requestStatus, reqStatus.value); return; }
+    const favorite=e.target.closest('[data-favorite-provider]')?.dataset.favoriteProvider; if(favorite){ await toggleFavoriteProvider(favorite); return; }
+    const verify=e.target.closest('[data-verify-provider]')?.dataset.verifyProvider; if(verify){ await toggleProviderVerified(verify); return; }
     const plan=e.target.closest('[data-plan]')?.dataset.plan; if(plan){ const [id,p]=plan.split('|'); await updateProviderPlan(id,p); return; }
     const requestPlan=e.target.closest('[data-request-plan]')?.dataset.requestPlan; if(requestPlan){ await requestProviderPlan(requestPlan); return; }
     const del=e.target.closest('[data-delete-provider]')?.dataset.deleteProvider; if(del){ await deleteProvider(del); return; }

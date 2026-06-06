@@ -623,3 +623,72 @@ button, .tabs button, input, select, textarea{
   background:#f1f5f9;
   color:#475569;
 }
+
+/* V10 - painel profissional e status dos pedidos */
+.panel-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}
+.panel-head h4{margin:0 0 4px;}
+.panel-head p{margin:0;}
+.dashboard-section .cards{margin-bottom:18px;}
+.request-title-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.request-status-pill{
+  display:inline-flex;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:.82rem;
+  font-weight:900;
+  background:#e7f2ff;
+  color:#0f4c81;
+  white-space:nowrap;
+}
+.request-card.status-done .request-status-pill{background:#dcfce7;color:#166534;}
+.request-card.status-cancelled .request-status-pill{background:#fee2e2;color:#991b1b;}
+.request-card.status-accepted .request-status-pill{background:#ede9fe;color:#5b21b6;}
+.request-card.status-quoted .request-status-pill{background:#fff7d6;color:#7a4b00;}
+.request-card.status-analysis .request-status-pill{background:#e0f2fe;color:#075985;}
+.request-actions{
+  display:flex;
+  align-items:end;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.status-control{
+  margin:0;
+  min-width:190px;
+}
+.status-control select{
+  margin-top:6px;
+}
+.badge.approved{
+  background:#dcfce7;
+  color:#166534;
+}
+@media(max-width:720px){
+  .panel-head{
+    flex-direction:column;
+  }
+  .panel-head button{
+    width:100%;
+  }
+  .request-title-row{
+    flex-direction:column;
+  }
+  .request-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .status-control{
+    width:100%;
+  }
+}
